@@ -316,7 +316,8 @@ export function PartnersPageClient() {
         >
           <div
             ref={globeLayerRef}
-            className="relative mx-auto w-[94vw] max-w-[1180px] will-change-transform md:w-[90vw] md:max-w-[1900px]"
+            className="relative mx-auto will-change-transform"
+            style={{ width: "min(82vw, 68vh, 1000px)" }}
             aria-label={`${entityLabel} network globe`}
           >
             <NetworkGlobe
