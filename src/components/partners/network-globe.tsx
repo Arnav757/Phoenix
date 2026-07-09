@@ -31,6 +31,11 @@ const FEATURED_INTERVAL_MS = 9000; // time on each featured entity
 const ROUTE_SAMPLES = 26; // points sampled along each great-circle route
 const ROUTE_DRAW_MS = 900; // progressive route reveal duration
 const HUB_PULSE_MS = 700; // hub pulse duration once a route arrives
+const AMBIENT_TRAVEL_MS = 1900; // time for an ambient pulse to cross HQ → Hyderabad
+const AMBIENT_MIN_GAP_MS = 2000; // new ambient pulse starts every 2-3s
+const AMBIENT_MAX_GAP_MS = 3000;
+const AMBIENT_MAX_CONCURRENT = 2;
+const AMBIENT_HUB_GLOW_MS = 500; // softer/briefer than a real selection's hub pulse
 
 const CHIP_HALF_W = 60;
 const CHIP_H = 34;
@@ -88,11 +93,9 @@ const DECLUTTER_MAX_CHIPS = 9; // logo chips shown at once when nothing is focus
 export function NetworkGlobe({
   entities,
   selectedId,
-  lockedId,
   visibleIds,
   highlightIds,
   onSelect,
-  onHoverChange,
   onFeature,
   onRouteComplete,
   featuredOrder,
@@ -101,16 +104,13 @@ export function NetworkGlobe({
   className,
 }: {
   entities: NetworkEntity[];
-  /** hover-merged id used for visual highlighting (null = none active) */
+  /** the clicked/locked selection — click is the only way this changes; null = idle */
   selectedId: string | null;
-  /** the actual locked (clicked) id — used only to decide click toggle-off, independent of hover */
-  lockedId: string | null;
   /** entities passing current filters/search; others hidden */
   visibleIds: Set<string>;
   /** hover-highlight set (category/row hover); empty = no highlight */
   highlightIds: Set<string>;
   onSelect: (id: string | null) => void;
-  onHoverChange?: (id: string | null) => void;
   /** fired as the idle spotlight moves between entities (id or null) */
   onFeature?: (id: string | null) => void;
   /** fired once a route (selection or featured) finishes drawing into Hyderabad */
@@ -135,6 +135,7 @@ export function NetworkGlobe({
   const pulseRef = useRef<HTMLSpanElement>(null);
   const hubRef = useRef<HTMLDivElement>(null);
   const hubPulseRef = useRef<HTMLSpanElement>(null);
+  const ambientDotRefs = useRef<(HTMLSpanElement | null)[]>([null, null]);
 
   // interaction state lives in refs — read by the render loop each frame
   const stateRef = useRef({
@@ -150,6 +151,12 @@ export function NetworkGlobe({
     routeStart: 0,
     routeFiredFor: null as string | null, // id we've already fired onRouteComplete for
     hubPulseUntil: 0,
+    // ambient "always alive" pulses — travel HQ→Hyderabad independent of
+    // selection, at most AMBIENT_MAX_CONCURRENT at once, so the network
+    // reads as continuously active even when no one is interacting
+    ambient: [] as { id: string; start: number }[],
+    nextAmbientAt: 0,
+    lastAmbientId: null as string | null,
   });
   const selectedRef = useRef<string | null>(null);
   const visibleRef = useRef(visibleIds);
@@ -415,14 +422,22 @@ export function NetworkGlobe({
         });
       }
 
-      // 5) collaboration route — HQ of the selected/featured entity → Hyderabad hub
+      // 5) collaboration routes — every entity's HQ → Hyderabad path stays
+      // visible at all times (subtle, dashed); the selected/featured one
+      // draws progressively and brighter on top of its own base path.
       const routeProgress = Math.min(1, (now - s.routeStart) / ROUTE_DRAW_MS);
       for (const p of entities) {
         const key = `${p.id}-hub`;
         const routed = routedId === p.id;
         const hqV = orient(hqBase.get(p.id)!, phi);
-        if (routed && hqV.z > 0.02) {
-          setRoute(key, buildRoute(hqBase.get(p.id)!, hubBase, phi, routeProgress));
+        const front = hqV.z > 0.02 && vis.has(p.id);
+        const pathEl = routeSvgRef.current?.querySelector<SVGPathElement>(
+          `[data-route="${key}"]`
+        );
+        if (front) {
+          const progress = routed ? routeProgress : 1;
+          setRoute(key, buildRoute(hqBase.get(p.id)!, hubBase, phi, progress));
+          if (pathEl) pathEl.style.opacity = routed ? "1" : "0.14";
         } else {
           setRoute(key, "");
         }
@@ -432,6 +447,67 @@ export function NetworkGlobe({
         s.hubPulseUntil = now + HUB_PULSE_MS;
         onRouteCompleteRef.current?.(routedId);
       }
+
+      // 5b) ambient pulses — independent of selection, a bright dot travels
+      // one or two routes at a time so the network reads as continuously
+      // alive even while idle. Paused while a real selection is active so it
+      // never competes with the deliberate route the user asked to see.
+      if (sel == null) {
+        if (
+          s.ambient.length < AMBIENT_MAX_CONCURRENT &&
+          now >= s.nextAmbientAt &&
+          vis.size > 0
+        ) {
+          const pool = entities.filter(
+            (e) => vis.has(e.id) && e.id !== s.lastAmbientId
+          );
+          const choices = pool.length ? pool : entities.filter((e) => vis.has(e.id));
+          if (choices.length) {
+            const pick = choices[Math.floor(Math.random() * choices.length)];
+            s.ambient.push({ id: pick.id, start: now });
+            s.lastAmbientId = pick.id;
+          }
+          s.nextAmbientAt =
+            now + AMBIENT_MIN_GAP_MS + Math.random() * (AMBIENT_MAX_GAP_MS - AMBIENT_MIN_GAP_MS);
+        }
+      } else {
+        s.ambient.length = 0;
+      }
+      let ambientHubGlow = false;
+      s.ambient = s.ambient.filter((pulse) => {
+        const t = Math.min(1, (now - pulse.start) / AMBIENT_TRAVEL_MS);
+        if (t >= 1) {
+          ambientHubGlow = true;
+          return false;
+        }
+        return true;
+      });
+      for (let i = 0; i < AMBIENT_MAX_CONCURRENT; i++) {
+        const dot = ambientDotRefs.current[i];
+        const pulse = s.ambient[i];
+        if (!dot) continue;
+        if (!pulse) {
+          dot.style.opacity = "0";
+          continue;
+        }
+        const t = Math.min(1, (now - pulse.start) / AMBIENT_TRAVEL_MS);
+        const from = hqBase.get(pulse.id);
+        if (!from) {
+          dot.style.opacity = "0";
+          continue;
+        }
+        const along = slerp(from, hubBase, t);
+        const v = orient(along, phi);
+        if (v.z > 0.02) {
+          dot.style.transform = `translate(-50%,-50%) translate(${cx + v.x * r}px,${
+            cy - v.y * r
+          }px)`;
+          dot.style.opacity = String(0.35 + 0.65 * Math.sin(Math.PI * Math.min(1, t * 1.15)));
+        } else {
+          dot.style.opacity = "0";
+        }
+      }
+      if (ambientHubGlow) s.hubPulseUntil = Math.max(s.hubPulseUntil, now + AMBIENT_HUB_GLOW_MS);
 
       // 6) hub marker + pulse
       const hub = hubRef.current;
@@ -631,6 +707,23 @@ export function NetworkGlobe({
         ))}
       </svg>
 
+      {/* ambient traveling pulses — brighter than the base route, always
+          moving toward Hyderabad; at most two exist at once */}
+      {[0, 1].map((i) => (
+        <span
+          key={i}
+          ref={(el) => {
+            ambientDotRefs.current[i] = el;
+          }}
+          className="pointer-events-none absolute left-0 top-0 z-[15] block h-[5px] w-[5px] rounded-full opacity-0"
+          style={{
+            background: "var(--eng-red)",
+            boxShadow: "0 0 5px 1.5px rgb(200 73 58 / 55%)",
+          }}
+          aria-hidden
+        />
+      ))}
+
       {/* featured spotlight pulse */}
       <span
         ref={pulseRef}
@@ -697,12 +790,9 @@ export function NetworkGlobe({
             if (el) chipRefs.current.set(p.id, el);
             else chipRefs.current.delete(p.id);
           }}
-          onMouseEnter={() => onHoverChange?.(p.id)}
-          onMouseLeave={() => onHoverChange?.(null)}
-          onFocus={() => onSelect(p.id)}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(lockedId === p.id ? null : p.id);
+            onSelect(selectedId === p.id ? null : p.id);
           }}
           aria-label={`${p.name} — headquarters in ${p.hq.city}, ${p.hq.country}`}
           className="absolute left-0 top-0 flex h-9 items-center rounded-full border border-border bg-white/95 px-2.5 shadow-[0_1px_8px_rgba(15,40,90,0.10)] backdrop-blur-sm transition-[opacity,box-shadow] duration-300 will-change-transform hover:border-primary/60 hover:shadow-[0_0_0_1px_rgb(0_120_243/35%),0_4px_18px_rgb(0_120_243/22%)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"

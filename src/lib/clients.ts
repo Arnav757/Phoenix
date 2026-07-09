@@ -9,6 +9,18 @@
 
 import { city, REGIONS, type NetworkEntity, type Region } from "./network-types";
 
+// Hero copy for the Clients tab — kicker + quote are verbatim from the
+// "Our Clients" section of phoenixindia.net/clients; the second line names
+// the sectors actually listed there (IT & ITES, Health, Hospitality,
+// Technology, Office Spaces, Finance, E-Commerce, Consulting, F&B) rather
+// than inventing marketing copy.
+export const clientsIntro = {
+  quote:
+    "Expertise, passion and foresight come together in the Phoenix team to steer the company towards new horizons.",
+  summary:
+    "Phoenix buildings are home to a diverse roster of occupiers — from global IT and technology leaders to healthcare, finance, hospitality and consumer brands — who choose Phoenix for the quality and reliability of its developments.",
+};
+
 export type Client = NetworkEntity & {
   category: ClientCategory;
 };

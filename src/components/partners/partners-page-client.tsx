@@ -17,6 +17,7 @@ import {
   countryList as partnerCountryList,
   partnerCount,
   countryCount,
+  partnersIntro,
 } from "@/lib/partners";
 import {
   CLIENT_CATEGORIES,
@@ -25,6 +26,7 @@ import {
   clientCountryList,
   clientCount,
   clientCountryCount,
+  clientsIntro,
 } from "@/lib/clients";
 
 type SortKey = "featured" | "name" | "category" | "country";
@@ -42,8 +44,7 @@ const TABS: { key: Tab; label: string }[] = [
 // so all surfaces stay in sync when switching tabs — no page reload.
 export function PartnersPageClient() {
   const [tab, setTab] = useState<Tab>("partners");
-  const [lockedId, setLockedId] = useState<string | null>(null);
-  const [hoverId, setHoverId] = useState<string | null>(null); // globe chip hover
+  const [lockedId, setLockedId] = useState<string | null>(null); // click-only selection
   const [rowHoverId, setRowHoverId] = useState<string | null>(null); // directory hover
   const [featuredId, setFeaturedId] = useState<string | null>(null); // idle spotlight
   const [hoverCategory, setHoverCategory] = useState<string | null>(null);
@@ -71,7 +72,6 @@ export function PartnersPageClient() {
     if (next === tab) return;
     setTab(next);
     setLockedId(null);
-    setHoverId(null);
     setRowHoverId(null);
     setFeaturedId(null);
     setHoverCategory(null);
@@ -103,8 +103,9 @@ export function PartnersPageClient() {
     setFocusLng(Math.atan2(sin, cos) / rad);
   };
 
-  // transient hover previews; a click locks the selection
-  const effectiveId = hoverId ?? lockedId;
+  // selection is click-only — no hover preview, so the globe never reacts
+  // to accidental mouse movement while it's rotating
+  const effectiveId = lockedId;
   const selected: NetworkEntity | null =
     entities.find((p) => p.id === effectiveId) ?? null;
 
@@ -222,6 +223,22 @@ export function PartnersPageClient() {
     };
   }, [reduceMotion]);
 
+  // clicking outside the globe (and outside the panel itself) closes the
+  // current selection and returns the globe to idle — deliberate dismissal,
+  // not an accidental one
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!lockedId) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (globeLayerRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setLockedId(null);
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [lockedId]);
+
   return (
     <>
       <Navbar visible />
@@ -252,26 +269,36 @@ export function PartnersPageClient() {
       />
 
       <main className="pb-28 pt-28 md:pt-32">
-        {/* HERO — nav → heading → description → toggle, reading order before the globe */}
+        {/* HERO — nav → heading → description → toggle, reading order before the globe.
+            Heading/description swap content per tab with a soft crossfade rather
+            than an instant change. */}
         <header className="mx-auto max-w-3xl px-6">
           <Reveal>
             <span className="tech-label text-primary">
               Global network · {totalCount} {tab} · {totalCountries} countries
             </span>
           </Reveal>
-          <Reveal delay={0.08}>
-            <h1 className="mt-4 text-5xl font-semibold tracking-tight text-foreground md:text-7xl">
-              Our Partners
-            </h1>
-          </Reveal>
-          <Reveal delay={0.16}>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Behind every successful development is a network of trusted global
-              partners. From steel manufacturers and façade specialists to
-              engineering consultants and technology leaders, our collaborations
-              bring world-class expertise to every project.
-            </p>
-          </Reveal>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <h1 className="mt-4 text-5xl font-semibold tracking-tight text-foreground md:text-7xl">
+                {tab === "partners" ? "Our Partners" : "Our Clients"}
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                {tab === "partners" ? partnersIntro.summary : clientsIntro.summary}
+              </p>
+              {tab === "clients" && (
+                <p className="mt-3 max-w-2xl text-base italic leading-relaxed text-muted-foreground/80">
+                  “{clientsIntro.quote}”
+                </p>
+              )}
+            </motion.div>
+          </AnimatePresence>
 
           {/* segmented tab control — Partners / Clients, one shared globe */}
           <Reveal delay={0.22} className="mt-8">
@@ -304,75 +331,15 @@ export function PartnersPageClient() {
           </Reveal>
         </header>
 
-        {/* GLOBE — the monumental centerpiece. No frame, no border, no card: it
-            sits directly on the blueprint sheet, dominating ~88-94% of the page
-            width. Materializes in (blur + scale) rather than a simple fade, so
-            the entry reads as the Earth resolving into view. */}
-        <motion.div
-          className="relative mt-14 md:mt-16"
-          initial={reduceMotion ? undefined : { opacity: 0, scale: 0.96, filter: "blur(6px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          transition={{ duration: 1.1, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div
-            ref={globeLayerRef}
-            className="relative mx-auto will-change-transform"
-            style={{ width: "min(82vw, 68vh, 1000px)" }}
-            aria-label={`${entityLabel} network globe`}
-          >
-            <NetworkGlobe
-              entities={entities}
-              selectedId={effectiveId}
-              lockedId={lockedId}
-              visibleIds={visibleIds}
-              highlightIds={highlightIds}
-              onSelect={(id) => setLockedId(id)}
-              onHoverChange={setHoverId}
-              onFeature={setFeaturedId}
-              onRouteComplete={handleRouteComplete}
-              featuredOrder={featuredOrder}
-              focusLng={focusLng}
-              declutter={declutter}
-            />
-
-            {/* featured-entity caption (idle spotlight) */}
-            <AnimatePresence>
-              {featured && !effectiveId && (
-                <motion.div
-                  key={featured.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  className="pointer-events-none absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-white/90 px-4 py-2 shadow-[0_2px_14px_rgba(15,40,90,0.10)] backdrop-blur-sm"
-                >
-                  {featured.logo ? (
-                    <Image
-                      src={featured.logo}
-                      alt=""
-                      width={72}
-                      height={22}
-                      className="h-4 w-auto max-w-[76px] object-contain"
-                    />
-                  ) : (
-                    <span className="text-xs font-medium text-foreground">{featured.name}</span>
-                  )}
-                  <span className="tech-label text-muted-foreground">
-                    {featured.hq.city}, {featured.hq.country}
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-
-        {/* SUPPORTING INFORMATION — discovered after the globe, never overlapping it.
-            Legend on the left, Network Profile on the right. */}
-        <div className="mx-auto mt-14 grid max-w-7xl gap-8 px-6 md:mt-20 md:grid-cols-2">
-          <Reveal>
-            <div>
+        {/* STAGE — the globe dominates the center at near-full viewport height;
+            the legend/filters/stats frame it on the left, the Network Profile
+            frames it on the right. Nothing sits on top of the globe itself. */}
+        <div className="mx-auto mt-10 grid max-w-[1800px] grid-cols-1 items-center gap-6 px-6 lg:mt-6 lg:grid-cols-[260px_minmax(0,1fr)_300px] lg:gap-4 lg:px-10">
+          {/* LEFT — legend, categories, stats */}
+          <Reveal className="order-2 lg:order-1">
+            <div className="lg:sticky lg:top-28">
               <p className="tech-label text-primary">Global network</p>
-              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground lg:flex-col lg:gap-2">
                 <li className="flex items-center gap-2.5">
                   <span className="block size-2 rotate-45 bg-primary shadow-[0_0_0_2px_white]" />
                   Headquarters
@@ -402,7 +369,7 @@ export function PartnersPageClient() {
               </ul>
 
               <p className="tech-label mt-6 text-primary">{entityLabel} categories</p>
-              <ul className="mt-2 flex flex-wrap gap-2">
+              <ul className="mt-2 flex flex-wrap gap-2 lg:flex-col lg:gap-1">
                 {categories.map((c) => (
                   <li key={c}>
                     <button
@@ -412,7 +379,7 @@ export function PartnersPageClient() {
                       onBlur={() => setHoverCategory(null)}
                       onClick={() => selectCategory(c)}
                       aria-pressed={category === c}
-                      className={`rounded-full border px-3 py-1.5 text-xs transition-colors duration-300 ${
+                      className={`rounded-full border px-3 py-1.5 text-xs transition-colors duration-300 lg:w-full lg:rounded-md lg:border-0 lg:px-2 lg:py-1 lg:text-left ${
                         category === c
                           ? "border-primary bg-primary/10 font-medium text-primary"
                           : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -423,16 +390,92 @@ export function PartnersPageClient() {
                   </li>
                 ))}
               </ul>
+
+              <p className="tech-label mt-6 text-primary">Network statistics</p>
+              <dl className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <div className="flex items-baseline justify-between gap-2 lg:justify-start lg:gap-2">
+                  <dt>Total {tab}</dt>
+                  <dd className="font-medium text-foreground">{totalCount}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 lg:justify-start lg:gap-2">
+                  <dt>Countries</dt>
+                  <dd className="font-medium text-foreground">{totalCountries}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 lg:justify-start lg:gap-2">
+                  <dt>Categories</dt>
+                  <dd className="font-medium text-foreground">{categories.length}</dd>
+                </div>
+              </dl>
             </div>
           </Reveal>
 
-          <Reveal delay={0.08}>
-            <NetworkPanel
-              entity={panelEntity}
-              entityLabel={entityLabel}
-              onClose={() => setLockedId(null)}
-            />
-          </Reveal>
+          {/* CENTER — the monumental globe. No frame, no border, no card. */}
+          <motion.div
+            className="relative order-1 lg:order-2"
+            initial={reduceMotion ? undefined : { opacity: 0, scale: 0.96, filter: "blur(6px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            transition={{ duration: 1.1, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div
+              ref={globeLayerRef}
+              className="relative mx-auto will-change-transform"
+              style={{ width: "min(90vw, 86vh, 1150px)" }}
+              aria-label={`${entityLabel} network globe`}
+            >
+              <NetworkGlobe
+                entities={entities}
+                selectedId={effectiveId}
+                visibleIds={visibleIds}
+                highlightIds={highlightIds}
+                onSelect={(id) => setLockedId(id)}
+                onFeature={setFeaturedId}
+                onRouteComplete={handleRouteComplete}
+                featuredOrder={featuredOrder}
+                focusLng={focusLng}
+                declutter={declutter}
+              />
+
+              {/* featured-entity caption (idle spotlight) */}
+              <AnimatePresence>
+                {featured && !effectiveId && (
+                  <motion.div
+                    key={featured.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    className="pointer-events-none absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-white/90 px-4 py-2 shadow-[0_2px_14px_rgba(15,40,90,0.10)] backdrop-blur-sm"
+                  >
+                    {featured.logo ? (
+                      <Image
+                        src={featured.logo}
+                        alt=""
+                        width={72}
+                        height={22}
+                        className="h-4 w-auto max-w-[76px] object-contain"
+                      />
+                    ) : (
+                      <span className="text-xs font-medium text-foreground">{featured.name}</span>
+                    )}
+                    <span className="tech-label text-muted-foreground">
+                      {featured.hq.city}, {featured.hq.country}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+
+          {/* RIGHT — Network Profile. Hidden until a selection exists. */}
+          <div ref={panelRef} className="order-3">
+            <div className="lg:sticky lg:top-28">
+              <NetworkPanel
+                entity={panelEntity}
+                entityLabel={entityLabel}
+                onClose={() => setLockedId(null)}
+              />
+            </div>
+          </div>
         </div>
 
         {/* DIRECTORY — secondary, collapsed by default */}

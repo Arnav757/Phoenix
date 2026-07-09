@@ -9,6 +9,14 @@ import { city, REGIONS, type NetworkEntity, type Office, type Region } from "./n
 export type { Office, Region };
 export { REGIONS };
 
+// Hero copy for the Partners tab — unchanged from the original page copy,
+// just relocated here so the page component can switch cleanly between
+// Partner/Client hero content by tab.
+export const partnersIntro = {
+  summary:
+    "Behind every successful development is a network of trusted global partners. From steel manufacturers and façade specialists to engineering consultants and technology leaders, our collaborations bring world-class expertise to every project.",
+};
+
 export type Partner = NetworkEntity & {
   logo: string; // partners always have a logo today
   category: PartnerCategory;
