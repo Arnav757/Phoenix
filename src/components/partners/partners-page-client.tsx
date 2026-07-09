@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Navbar } from "@/components/navbar";
-import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
+import { Reveal, Stagger, staggerItem } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
 import { NetworkGlobe } from "./network-globe";
 import { NetworkPanel } from "./network-panel";
 import type { NetworkEntity, Region } from "@/lib/network-types";
 import {
   CATEGORIES,
+  FEATURED_ORDER as PARTNER_FEATURED_ORDER,
   PARTNERS,
   REGIONS,
   countryList as partnerCountryList,
@@ -20,6 +21,7 @@ import {
 import {
   CLIENT_CATEGORIES,
   CLIENTS,
+  FEATURED_ORDER as CLIENT_FEATURED_ORDER,
   clientCountryList,
   clientCount,
   clientCountryCount,
@@ -52,11 +54,13 @@ export function PartnersPageClient() {
   const [sort, setSort] = useState<SortKey>("featured");
   const [dirOpen, setDirOpen] = useState(false);
   const [panelReady, setPanelReady] = useState(false); // gated until route+pulse finish
+  const [focusLng, setFocusLng] = useState<number | null>(null); // category-cluster rotate request
 
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const entities: NetworkEntity[] = tab === "partners" ? PARTNERS : CLIENTS;
   const categories: readonly string[] = tab === "partners" ? CATEGORIES : CLIENT_CATEGORIES;
+  const featuredOrder = tab === "partners" ? PARTNER_FEATURED_ORDER : CLIENT_FEATURED_ORDER;
   const entityLabel = tab === "partners" ? "Partner" : "Client";
   const totalCount = tab === "partners" ? partnerCount : clientCount;
   const totalCountries = tab === "partners" ? countryCount : clientCountryCount;
@@ -77,6 +81,26 @@ export function PartnersPageClient() {
     setCategory("all");
     setSort("featured");
     setPanelReady(false);
+    setFocusLng(null);
+  };
+
+  // clicking a category (not hovering) filters AND rotates the globe toward
+  // that cluster's center of gravity — hovering still just highlights
+  const selectCategory = (c: string) => {
+    const next = category === c ? "all" : c;
+    setCategory(next);
+    if (next === "all") {
+      setFocusLng(null);
+      return;
+    }
+    const matches = entities.filter((p) => p.category === next);
+    if (!matches.length) return;
+    // circular mean of longitudes so a cluster straddling the antimeridian
+    // (e.g. Asia-Pacific) doesn't average to the wrong side of the globe
+    const rad = Math.PI / 180;
+    const sin = matches.reduce((s, p) => s + Math.sin(p.hq.lng * rad), 0);
+    const cos = matches.reduce((s, p) => s + Math.cos(p.hq.lng * rad), 0);
+    setFocusLng(Math.atan2(sin, cos) / rad);
   };
 
   // transient hover previews; a click locks the selection
@@ -128,16 +152,30 @@ export function PartnersPageClient() {
 
   const visibleIds = useMemo(() => new Set(filtered.map((p) => p.id)), [filtered]);
 
-  // globe highlight = category-legend hover ∪ directory-row hover
+  // globe highlight = category-legend hover ∪ directory-row hover ∪ an
+  // active category filter — a selected category must stop the idle
+  // spotlight and un-dim only its own companies, exactly like a hover does
   const highlightIds = useMemo(() => {
     const set = new Set<string>();
     if (rowHoverId) set.add(rowHoverId);
-    if (hoverCategory)
-      for (const p of entities) if (p.category === hoverCategory) set.add(p.id);
+    const activeCategory = hoverCategory ?? (category !== "all" ? category : null);
+    if (activeCategory)
+      for (const p of entities) if (p.category === activeCategory) set.add(p.id);
     return set;
-  }, [entities, rowHoverId, hoverCategory]);
+  }, [entities, rowHoverId, hoverCategory, category]);
 
   const featured = entities.find((p) => p.id === featuredId) ?? null;
+
+  // decluttered = nothing focused/filtered/hovered — the globe caps how many
+  // logo chips show at once. Any interaction (search, filter, hover, select)
+  // immediately lifts the cap so the relevant companies surface in full.
+  const declutter =
+    !effectiveId &&
+    highlightIds.size === 0 &&
+    query.trim() === "" &&
+    region === "all" &&
+    country === "all" &&
+    category === "all";
 
   const selectRow = (id: string) => {
     setLockedId(id);
@@ -156,18 +194,59 @@ export function PartnersPageClient() {
 
   const panelEntity = panelReady ? selected : null;
 
+  // Subtle cursor parallax — background glow and globe drift independently,
+  // a few px max (Apple-product-page restraint, not a gimmick). Applied via
+  // direct transform mutation on refs rather than React state, mirroring
+  // the perf-conscious pattern already used inside NetworkGlobe itself.
+  const glowRef = useRef<HTMLDivElement>(null);
+  const globeLayerRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+  useEffect(() => {
+    if (reduceMotion) return;
+    let raf = 0;
+    const onMove = (e: PointerEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const nx = e.clientX / window.innerWidth - 0.5;
+        const ny = e.clientY / window.innerHeight - 0.5;
+        if (glowRef.current)
+          glowRef.current.style.transform = `translate3d(${nx * 18}px, ${ny * 14}px, 0)`;
+        if (globeLayerRef.current)
+          globeLayerRef.current.style.transform = `translate3d(${nx * -8}px, ${ny * -6}px, 0)`;
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, [reduceMotion]);
+
   return (
     <>
       <Navbar visible />
 
-      {/* full-page blueprint presentation board — one continuous architectural sheet */}
+      {/* full-page blueprint presentation board — one continuous architectural sheet.
+          Visibility has hierarchy: strongest near the top where the globe sits,
+          progressively softer further down, so the eye is drawn to the hero. */}
       <div
-        className="bp-grid pointer-events-none fixed inset-0 -z-10 opacity-[0.45]"
+        className="bp-grid pointer-events-none fixed inset-0 -z-10 opacity-[0.5]"
         style={{
           maskImage:
-            "radial-gradient(140% 120% at 50% 0%, black 55%, transparent 100%)",
+            "radial-gradient(70% 60% at 50% 18%, black 35%, rgb(0 0 0 / 0.55) 65%, transparent 100%)",
           WebkitMaskImage:
-            "radial-gradient(140% 120% at 50% 0%, black 55%, transparent 100%)",
+            "radial-gradient(70% 60% at 50% 18%, black 35%, rgb(0 0 0 / 0.55) 65%, transparent 100%)",
+        }}
+        aria-hidden
+      />
+      {/* soft atmospheric lighting behind the globe — the layer between the
+          blueprint and the globe itself; drifts a touch on cursor move */}
+      <div
+        ref={glowRef}
+        className="pointer-events-none fixed inset-0 -z-10 will-change-transform"
+        style={{
+          background:
+            "radial-gradient(42% 32% at 50% 26%, rgb(0 120 243 / 10%) 0%, rgb(0 120 243 / 4%) 55%, transparent 78%)",
         }}
         aria-hidden
       />
@@ -225,11 +304,19 @@ export function PartnersPageClient() {
           </Reveal>
         </header>
 
-        {/* GLOBE — the centerpiece. No frame, no border, no card: it sits directly
-            on the blueprint sheet and dominates the page (~70-80vw), unboxed. */}
-        <Reveal delay={0.1} className="relative mt-16 md:mt-20">
+        {/* GLOBE — the monumental centerpiece. No frame, no border, no card: it
+            sits directly on the blueprint sheet, dominating ~88-94% of the page
+            width. Materializes in (blur + scale) rather than a simple fade, so
+            the entry reads as the Earth resolving into view. */}
+        <motion.div
+          className="relative mt-14 md:mt-16"
+          initial={reduceMotion ? undefined : { opacity: 0, scale: 0.96, filter: "blur(6px)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          transition={{ duration: 1.1, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div
-            className="relative mx-auto w-[86vw] max-w-[1000px] md:w-[78vw] md:max-w-[1500px]"
+            ref={globeLayerRef}
+            className="relative mx-auto w-[94vw] max-w-[1180px] will-change-transform md:w-[90vw] md:max-w-[1900px]"
             aria-label={`${entityLabel} network globe`}
           >
             <NetworkGlobe
@@ -242,6 +329,9 @@ export function PartnersPageClient() {
               onHoverChange={setHoverId}
               onFeature={setFeaturedId}
               onRouteComplete={handleRouteComplete}
+              featuredOrder={featuredOrder}
+              focusLng={focusLng}
+              declutter={declutter}
             />
 
             {/* featured-entity caption (idle spotlight) */}
@@ -273,7 +363,7 @@ export function PartnersPageClient() {
               )}
             </AnimatePresence>
           </div>
-        </Reveal>
+        </motion.div>
 
         {/* SUPPORTING INFORMATION — discovered after the globe, never overlapping it.
             Legend on the left, Network Profile on the right. */}
@@ -319,7 +409,7 @@ export function PartnersPageClient() {
                       onMouseLeave={() => setHoverCategory(null)}
                       onFocus={() => setHoverCategory(c)}
                       onBlur={() => setHoverCategory(null)}
-                      onClick={() => setCategory(category === c ? "all" : c)}
+                      onClick={() => selectCategory(c)}
                       aria-pressed={category === c}
                       className={`rounded-full border px-3 py-1.5 text-xs transition-colors duration-300 ${
                         category === c

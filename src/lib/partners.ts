@@ -285,6 +285,19 @@ export const PARTNERS: Partner[] = [
   },
 ];
 
+// Deliberate storytelling order for the idle "featured" spotlight — spans
+// distinct categories (Architects → Capital → Steel → Contractor →
+// Project Management → Capital) rather than array/insertion order, so the
+// idle cycle reads as a curated tour of the ecosystem, not a random walk.
+export const FEATURED_ORDER = [
+  "chapman-taylor", // Principal Architects
+  "gic", // Capital Partners
+  "jssl", // Structural Steel
+  "leighton", // General Contractor
+  "turner", // Project Management
+  "hdfc", // Capital Partners
+];
+
 export const partnerCount = PARTNERS.length;
 export const countryCount = new Set(PARTNERS.flatMap((p) => p.countries)).size;
 export const countryList = [...new Set(PARTNERS.flatMap((p) => p.countries))].sort();

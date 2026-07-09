@@ -488,6 +488,12 @@ export const CLIENTS: Client[] = [
   },
 ];
 
+// Deliberate storytelling order for the idle "featured" spotlight — spans
+// distinct sectors (Technology → Finance → Health → E-commerce →
+// Technology) rather than array/insertion order, so the idle cycle reads
+// as a curated tour of the client roster, not a random walk.
+export const FEATURED_ORDER = ["cognizant", "ubs", "optum", "amazon", "microsoft"];
+
 export const clientCount = CLIENTS.length;
 export const clientCountryCount = new Set(CLIENTS.flatMap((c) => c.countries)).size;
 export const clientCountryList = [...new Set(CLIENTS.flatMap((c) => c.countries))].sort();

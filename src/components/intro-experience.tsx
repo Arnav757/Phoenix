@@ -18,6 +18,16 @@ import { company } from "@/lib/content";
 // Safety: video error, blocked autoplay, or a stalled pipeline all finish
 // the intro instead of trapping the user. "Skip intro" is always available.
 // Reduced motion skips straight to the site.
+//
+// Hardening: onComplete (the state flip that unmounts this overlay, reveals
+// the navbar and restores scrolling) must never depend solely on a GSAP
+// timeline's onComplete callback — if that timeline is ever delayed or
+// dropped (backgrounded tab, a slow device, an unrelated GSAP error), the
+// site would stay locked forever. A hard fallback timer guarantees
+// completion fires regardless. Skip runs the same veil/fade language as a
+// natural finish, just compressed, so it reads as instant.
+const FINISH_DURATION = { veil: 0.9, gap: 0.15, fade: 0.8 }; // natural end-of-video
+const SKIP_DURATION = { veil: 0.22, gap: 0.04, fade: 0.26 }; // "Skip intro"
 export function IntroExperience({
   onComplete,
   onStart,
@@ -34,9 +44,10 @@ export function IntroExperience({
   const veilRef = useRef<HTMLDivElement>(null);
   const skipRef = useRef<HTMLButtonElement>(null);
   const reduce = useReducedMotion();
-  const doneRef = useRef(false);
+  const doneRef = useRef(false); // finish() has been entered (guards re-entry)
+  const completedRef = useRef(false); // onComplete has actually fired (guards double-fire)
   const playingRef = useRef(false);
-  const finishRef = useRef<() => void>(() => {});
+  const finishRef = useRef<(instant?: boolean) => void>(() => {});
   const startRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -62,17 +73,41 @@ export function IntroExperience({
 
     let stallTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const finish = () => {
+    // Fires the state hand-off exactly once, however it gets triggered
+    // (GSAP's onComplete, or the hard fallback timer below).
+    const complete = () => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      // release the decoder — the overlay is fully hidden by this point
+      video.removeAttribute("src");
+      video.load();
+      onComplete();
+    };
+
+    const finish = (instant = false) => {
       if (doneRef.current) return;
       doneRef.current = true;
       clearTimeout(stallTimer);
       video.pause();
+      // stop every running intro animation before starting the exit — no
+      // stacked/competing tweens on the same targets.
+      gsap.killTweensOf([veilRef.current, root, copyRef.current, cueRef.current]);
+
+      const d = instant ? SKIP_DURATION : FINISH_DURATION;
       // GSAP hand-off: veil closes over the final frame, then the whole
       // overlay fades out to reveal the site already in place beneath.
+      // Skip runs the identical language, just compressed, so it still
+      // reads as a transition rather than a hard cut.
       gsap
-        .timeline({ onComplete })
-        .to(veilRef.current, { opacity: 1, duration: 0.9, ease: "power2.inOut" })
-        .to(root, { opacity: 0, duration: 0.8, ease: "power2.inOut" }, "+=0.15");
+        .timeline({ onComplete: complete })
+        .to(veilRef.current, { opacity: 1, duration: d.veil, ease: "power2.inOut" })
+        .to(root, { opacity: 0, duration: d.fade, ease: "power2.inOut" }, `+=${d.gap}`);
+
+      // Hard fallback: guarantee the site unlocks even if the GSAP timeline
+      // above never fires (dropped rAF frames, a backgrounded tab, etc.).
+      // Never leave scrolling locked or the overlay intercepting clicks.
+      const maxMs = (d.veil + d.gap + d.fade) * 1000 + 600;
+      setTimeout(complete, maxMs);
     };
     finishRef.current = finish;
 
@@ -89,7 +124,7 @@ export function IntroExperience({
       });
       gsap.to(cueRef.current, { opacity: 0, duration: 0.5, ease: "power1.out" });
       const p = video.play();
-      if (p) p.catch(finish); // autoplay refused → enter the site instead
+      if (p) p.catch(() => finish()); // autoplay refused → enter the site instead
       // stalled media pipeline → don't trap the user
       stallTimer = setTimeout(() => {
         if (video.currentTime < 0.5) finish();
@@ -121,7 +156,7 @@ export function IntroExperience({
         e.preventDefault();
         startPlayback();
       }
-      if (e.key === "Escape") finish();
+      if (e.key === "Escape") finish(true);
     };
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -179,7 +214,7 @@ export function IntroExperience({
         ref={skipRef}
         onClick={(e) => {
           e.stopPropagation();
-          finishRef.current();
+          finishRef.current(true);
         }}
         className="tech-label absolute right-6 top-6 z-10 rounded-full border border-white/40 px-4 py-2 text-white/80 transition-colors hover:border-white hover:text-white"
       >

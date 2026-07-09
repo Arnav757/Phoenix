@@ -83,6 +83,8 @@ export function phiForLongitude(lng: number) {
   return -lng * DEG - LNG_OFFSET;
 }
 
+const DECLUTTER_MAX_CHIPS = 9; // logo chips shown at once when nothing is focused
+
 export function NetworkGlobe({
   entities,
   selectedId,
@@ -93,6 +95,9 @@ export function NetworkGlobe({
   onHoverChange,
   onFeature,
   onRouteComplete,
+  featuredOrder,
+  focusLng,
+  declutter = false,
   className,
 }: {
   entities: NetworkEntity[];
@@ -110,6 +115,14 @@ export function NetworkGlobe({
   onFeature?: (id: string | null) => void;
   /** fired once a route (selection or featured) finishes drawing into Hyderabad */
   onRouteComplete?: (id: string) => void;
+  /** curated storytelling order for the idle spotlight; falls back to entities.filter(featured) */
+  featuredOrder?: string[];
+  /** externally requested longitude to rotate toward (e.g. a category's cluster center) */
+  focusLng?: number | null;
+  /** when true and nothing is focused/filtered, cap simultaneous logo chips so the
+   *  globe doesn't overcrowd — hovering, selecting or filtering always reveals the
+   *  relevant chip regardless of this cap */
+  declutter?: boolean;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -180,6 +193,17 @@ export function NetworkGlobe({
   useEffect(() => {
     highlightRef.current = highlightIds;
   }, [highlightIds]);
+  const declutterRef = useRef(declutter);
+  declutterRef.current = declutter;
+
+  // external focus request (e.g. a clicked category) rotates toward that
+  // longitude without locking a selection — only while nothing is selected
+  useEffect(() => {
+    if (focusLng == null || selectedId) return;
+    aimAt(focusLng);
+    stateRef.current.lastInteraction = performance.now();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusLng]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -194,8 +218,14 @@ export function NetworkGlobe({
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    // curated storytelling order wins when provided; otherwise fall back to
+    // the featured flag, then to the full roster
+    const byId = new Map(entities.map((p) => [p.id, p]));
+    const curated = (featuredOrder ?? [])
+      .map((id) => byId.get(id))
+      .filter((p): p is NetworkEntity => !!p);
     const featuredPool = entities.filter((p) => p.featured);
-    const pool = featuredPool.length ? featuredPool : entities;
+    const pool = curated.length ? curated : featuredPool.length ? featuredPool : entities;
     let featuredIdx = 0;
 
     // pre-compute base vectors for HQs + offices (rotation-independent)
@@ -279,15 +309,44 @@ export function NetworkGlobe({
         }
       }
 
+      // 1b) decluttering — when nothing is focused/filtered/hovered, cap
+      // simultaneous logo chips to the most relevant (featured + the
+      // frontmost by depth) so the globe never overcrowds. The true-location
+      // dots above are unaffected — geographic accuracy always stands, only
+      // the logo labels are thinned. As the globe rotates, a different set
+      // naturally becomes frontmost, so more of the roster surfaces over time.
+      let chipList = shownList;
+      if (declutterRef.current && shownList.length > DECLUTTER_MAX_CHIPS) {
+        const byZ = [...shownList].sort((a, b) => b.z - a.z);
+        const kept = new Set<string>();
+        for (const item of byZ) {
+          if (item.p.featured) kept.add(item.p.id); // featured entities always surface
+        }
+        for (const item of byZ) {
+          if (kept.size >= DECLUTTER_MAX_CHIPS) break;
+          kept.add(item.p.id);
+        }
+        chipList = shownList.filter((item) => kept.has(item.p.id));
+        for (const item of shownList) {
+          if (!kept.has(item.p.id)) {
+            const chip = chipRefs.current.get(item.p.id);
+            if (chip) {
+              chip.style.opacity = "0";
+              chip.style.pointerEvents = "none";
+            }
+          }
+        }
+      }
+
       // 2) de-overlap chips in screen space — Fermat-spiral offset (golden
       //    angle, radius ∝ √attempt) so density scales gracefully as the
       //    roster grows, with real, non-overlapping hit targets even in
       //    dense clusters (fully recomputed each frame from live projected
       //    positions, never hardcoded)
       const GOLDEN_ANGLE = 2.399963;
-      shownList.sort((a, b) => a.sy - b.sy);
+      chipList.sort((a, b) => a.sy - b.sy);
       const placed: (Placed & { chipX: number })[] = [];
-      for (const raw of shownList) {
+      for (const raw of chipList) {
         const item = { ...raw, chipX: raw.sx };
         let y = item.sy;
         let x = item.sx;
@@ -507,7 +566,8 @@ export function NetworkGlobe({
       window.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("wheel", onWheel);
     };
-  }, [entities]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entities, featuredOrder]);
 
   return (
     <div
@@ -595,10 +655,23 @@ export function NetworkGlobe({
         className="pointer-events-none absolute left-0 top-0 z-[36] flex flex-col items-center opacity-0"
         aria-hidden
       >
-        <span className="relative flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-primary bg-white shadow-[0_0_0_4px_white,0_0_0_5px_rgb(0_120_243/30%)]">
+        {/* soft architectural halo — always-on, marks the network's destination */}
+        <span
+          className="absolute rounded-full"
+          style={{
+            width: 34,
+            height: 34,
+            transform: "translate(-50%,-50%)",
+            left: "50%",
+            top: "50%",
+            background:
+              "radial-gradient(circle, rgb(0 120 243 / 22%) 0%, rgb(0 120 243 / 6%) 55%, transparent 80%)",
+          }}
+        />
+        <span className="relative flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white shadow-[0_0_0_3px_white,0_0_10px_2px_rgb(0_120_243/35%)]">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
         </span>
-        <span className="tech-label mt-1.5 whitespace-nowrap rounded-full border border-border bg-white/95 px-2 py-0.5 text-[9px] text-primary shadow-sm">
+        <span className="tech-label mt-1.5 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-[9px] text-primary backdrop-blur-sm">
           Phoenix · Hyderabad
         </span>
       </div>
