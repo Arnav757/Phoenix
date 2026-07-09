@@ -4,26 +4,14 @@
 // "since" is optional and omitted where Phoenix hasn't published it.
 // Adding a partner = append to PARTNERS; every view renders from this file.
 
-export type Office = {
-  city: string;
-  country: string;
-  lat: number;
-  lng: number;
-};
+import { city, REGIONS, type NetworkEntity, type Office, type Region } from "./network-types";
 
-export type Partner = {
-  id: string;
-  name: string;
-  logo: string;
+export type { Office, Region };
+export { REGIONS };
+
+export type Partner = NetworkEntity & {
+  logo: string; // partners always have a logo today
   category: PartnerCategory;
-  website?: string;
-  hq: Office;
-  offices?: Office[]; // regional offices
-  since?: number;
-  summary: string; // 2–4 lines: who they are, expertise, how they support Phoenix
-  countries: string[];
-  region: Region;
-  featured?: boolean;
 };
 
 export const CATEGORIES = [
@@ -36,16 +24,6 @@ export const CATEGORIES = [
   "Integrated FM Services",
 ] as const;
 export type PartnerCategory = (typeof CATEGORIES)[number];
-
-export const REGIONS = ["Asia Pacific", "Europe", "Americas", "Middle East & Africa"] as const;
-export type Region = (typeof REGIONS)[number];
-
-const city = (city: string, country: string, lat: number, lng: number): Office => ({
-  city,
-  country,
-  lat,
-  lng,
-});
 
 export const PARTNERS: Partner[] = [
   {

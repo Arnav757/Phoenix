@@ -3,31 +3,34 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import createGlobe from "cobe";
-import type { Partner } from "@/lib/partners";
+import type { NetworkEntity } from "@/lib/network-types";
+import { HYDERABAD_HUB } from "@/lib/network-types";
 
 // Light-theme interactive globe. cobe draws the sphere; every marker is a
 // DOM element placed each frame by an orthographic projection synced to the
 // globe's rotation, so hover/selection never triggers a React re-render.
 //
-//  • Headquarters  = partner-logo chip + small filled diamond at the true point
-//  • Regional office = hollow ring dot
-//  • Connections   = curved great-circle dotted routes in engineering red
-//  • Idle          = slow rotation + a "featured partner" spotlight cycle
-//  • Collision      = logo chips are de-overlapped in screen space with leader
-//                     lines back to their true geographic point
+//  • Headquarters  = partner/client chip (logo or name) + filled diamond at the true point
+//  • Regional office = hollow ring dot (static — proves presence, no route)
+//  • Hyderabad hub  = fixed badge; every collaboration route converges here
+//  • Connections   = curved great-circle dotted routes, HQ → Hyderabad
+//  • Idle          = slow rotation + a "featured" spotlight cycle (route + hub pulse)
+//  • Collision      = chips are de-overlapped in screen space (2D spiral), with
+//                     leader lines back to their true geographic point
 
 const DEG = Math.PI / 180;
 const THETA = 0.28; // fixed tilt, matches cobe config below
-const IDLE_SPEED = 0.0016; // relaxed idle rotation (was 0.00045)
+const IDLE_SPEED = 0.0016; // relaxed idle rotation
 // cobe's texture longitude origin is 90° west of a plain sin/cos mapping —
 // calibrated against the rendered map so chips sit on their real countries
 const LNG_OFFSET = Math.PI / 2;
 const RADIUS_SCALE = 0.985;
 
 const FEATURED_IDLE_MS = 4500; // inactivity before the spotlight begins
-const FEATURED_INTERVAL_MS = 9000; // time on each featured partner
+const FEATURED_INTERVAL_MS = 9000; // time on each featured entity
 const ROUTE_SAMPLES = 26; // points sampled along each great-circle route
 const ROUTE_DRAW_MS = 900; // progressive route reveal duration
+const HUB_PULSE_MS = 700; // hub pulse duration once a route arrives
 
 const CHIP_HALF_W = 60;
 const CHIP_H = 34;
@@ -80,27 +83,33 @@ export function phiForLongitude(lng: number) {
   return -lng * DEG - LNG_OFFSET;
 }
 
-export function PartnerGlobe({
-  partners,
+export function NetworkGlobe({
+  entities,
   selectedId,
+  lockedId,
   visibleIds,
   highlightIds,
   onSelect,
   onHoverChange,
   onFeature,
+  onRouteComplete,
   className,
 }: {
-  partners: Partner[];
-  /** null = none selected (idle) */
+  entities: NetworkEntity[];
+  /** hover-merged id used for visual highlighting (null = none active) */
   selectedId: string | null;
-  /** partners passing current filters/search; others hidden */
+  /** the actual locked (clicked) id — used only to decide click toggle-off, independent of hover */
+  lockedId: string | null;
+  /** entities passing current filters/search; others hidden */
   visibleIds: Set<string>;
   /** hover-highlight set (category/row hover); empty = no highlight */
   highlightIds: Set<string>;
   onSelect: (id: string | null) => void;
   onHoverChange?: (id: string | null) => void;
-  /** fired as the idle spotlight moves between partners (id or null) */
+  /** fired as the idle spotlight moves between entities (id or null) */
   onFeature?: (id: string | null) => void;
+  /** fired once a route (selection or featured) finishes drawing into Hyderabad */
+  onRouteComplete?: (id: string) => void;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -111,6 +120,8 @@ export function PartnerGlobe({
   const leaderSvgRef = useRef<SVGSVGElement>(null);
   const routeSvgRef = useRef<SVGSVGElement>(null);
   const pulseRef = useRef<HTMLSpanElement>(null);
+  const hubRef = useRef<HTMLDivElement>(null);
+  const hubPulseRef = useRef<HTMLSpanElement>(null);
 
   // interaction state lives in refs — read by the render loop each frame
   const stateRef = useRef({
@@ -124,12 +135,16 @@ export function PartnerGlobe({
     featuredId: null as string | null,
     featuredSince: 0,
     routeStart: 0,
+    routeFiredFor: null as string | null, // id we've already fired onRouteComplete for
+    hubPulseUntil: 0,
   });
   const selectedRef = useRef<string | null>(null);
   const visibleRef = useRef(visibleIds);
   const highlightRef = useRef(highlightIds);
   const onFeatureRef = useRef(onFeature);
   onFeatureRef.current = onFeature;
+  const onRouteCompleteRef = useRef(onRouteComplete);
+  onRouteCompleteRef.current = onRouteComplete;
 
   const aimAt = (lng: number) => {
     const s = stateRef.current;
@@ -144,11 +159,12 @@ export function PartnerGlobe({
     selectedRef.current = selectedId;
     const s = stateRef.current;
     if (selectedId) {
-      const p = partners.find((x) => x.id === selectedId);
+      const p = entities.find((x) => x.id === selectedId);
       if (p) {
         s.paused = true;
         s.featuredId = null;
         s.routeStart = performance.now();
+        s.routeFiredFor = null;
         s.lastInteraction = performance.now();
         aimAt(p.hq.lng);
       }
@@ -157,7 +173,7 @@ export function PartnerGlobe({
       s.targetPhi = null;
       s.lastInteraction = performance.now();
     }
-  }, [selectedId, partners]);
+  }, [selectedId, entities]);
   useEffect(() => {
     visibleRef.current = visibleIds;
   }, [visibleIds]);
@@ -178,12 +194,13 @@ export function PartnerGlobe({
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const featuredPool = partners.filter((p) => p.featured);
-    const pool = featuredPool.length ? featuredPool : partners;
+    const featuredPool = entities.filter((p) => p.featured);
+    const pool = featuredPool.length ? featuredPool : entities;
     let featuredIdx = 0;
 
     // pre-compute base vectors for HQs + offices (rotation-independent)
-    const hqBase = new Map(partners.map((p) => [p.id, baseVec(p.hq.lat, p.hq.lng)]));
+    const hqBase = new Map(entities.map((p) => [p.id, baseVec(p.hq.lat, p.hq.lng)]));
+    const hubBase = baseVec(HYDERABAD_HUB.lat, HYDERABAD_HUB.lng);
 
     const setRoute = (key: string, d: string) => {
       const path = routeSvgRef.current?.querySelector<SVGPathElement>(
@@ -229,17 +246,19 @@ export function PartnerGlobe({
 
       // active highlight set (selection > hover/category > featured)
       const activeId = sel ?? (hi.size ? null : feat);
+      // the one entity (if any) whose route is currently animating toward the hub
+      const routedId = sel ?? feat;
 
       // 1) project all HQs, collect the ones that should show
       type Placed = {
-        p: Partner;
+        p: NetworkEntity;
         sx: number;
         sy: number;
         z: number;
         chipY: number;
       };
       const shownList: Placed[] = [];
-      for (const p of partners) {
+      for (const p of entities) {
         const v = orient(hqBase.get(p.id)!, phi);
         const front = v.z > 0.06;
         const shown = front && vis.has(p.id);
@@ -260,21 +279,34 @@ export function PartnerGlobe({
         }
       }
 
-      // 2) de-overlap chips in screen space (stack downward), keep inside card
+      // 2) de-overlap chips in screen space — Fermat-spiral offset (golden
+      //    angle, radius ∝ √attempt) so density scales gracefully as the
+      //    roster grows, with real, non-overlapping hit targets even in
+      //    dense clusters (fully recomputed each frame from live projected
+      //    positions, never hardcoded)
+      const GOLDEN_ANGLE = 2.399963;
       shownList.sort((a, b) => a.sy - b.sy);
       const placed: (Placed & { chipX: number })[] = [];
       for (const raw of shownList) {
         const item = { ...raw, chipX: raw.sx };
         let y = item.sy;
-        for (const q of placed) {
-          if (Math.abs(item.chipX - q.chipX) < CHIP_HALF_W * 1.6) {
-            if (y - q.chipY < CHIP_H + CHIP_GAP && y - q.chipY > -(CHIP_H + CHIP_GAP)) {
-              y = q.chipY + CHIP_H + CHIP_GAP;
-            }
-          }
+        let x = item.sx;
+        let attempt = 0;
+        const collides = () =>
+          placed.some(
+            (q) =>
+              Math.abs(x - q.chipX) < CHIP_HALF_W * 1.8 &&
+              Math.abs(y - q.chipY) < CHIP_H + CHIP_GAP
+          );
+        while (collides() && attempt < 32) {
+          attempt += 1;
+          const angle = attempt * GOLDEN_ANGLE;
+          const radius = Math.sqrt(attempt) * (CHIP_H * 0.9);
+          x = item.sx + Math.cos(angle) * radius;
+          y = item.sy + Math.sin(angle) * radius * 0.7;
         }
         item.chipY = Math.min(width - CHIP_H, Math.max(CHIP_H, y));
-        item.chipX = Math.min(width - CHIP_HALF_W, Math.max(CHIP_HALF_W, item.sx));
+        item.chipX = Math.min(width - CHIP_HALF_W, Math.max(CHIP_HALF_W, x));
         placed.push(item);
       }
 
@@ -307,12 +339,9 @@ export function PartnerGlobe({
         }
       }
 
-      // 4) routes + office dots — only for a real selection/hover (not the
-      //    idle spotlight, which stays a pulse + logo per spec)
-      const routeProgress = Math.min(1, (now - s.routeStart) / ROUTE_DRAW_MS);
-      for (const p of partners) {
-        const hqV = orient(hqBase.get(p.id)!, phi);
-        const routed = sel === p.id;
+      // 4) regional office dots — static true-location markers, no route
+      for (const p of entities) {
+        const routed = routedId === p.id;
         p.offices?.forEach((o, i) => {
           const key = `${p.id}-${i}`;
           const dotEl = officeRefs.current.get(key);
@@ -324,18 +353,45 @@ export function PartnerGlobe({
             dotEl.style.transform = `translate(-50%,-50%) translate(${osx}px,${osy}px)`;
             dotEl.style.opacity = routed && oFront ? "1" : "0";
           }
-          if (routed && hqV.z > 0.02) {
-            setRoute(
-              key,
-              buildRoute(hqBase.get(p.id)!, baseVec(o.lat, o.lng), phi, routeProgress)
-            );
-          } else {
-            setRoute(key, "");
-          }
         });
       }
 
-      // 5) featured pulse ring
+      // 5) collaboration route — HQ of the selected/featured entity → Hyderabad hub
+      const routeProgress = Math.min(1, (now - s.routeStart) / ROUTE_DRAW_MS);
+      for (const p of entities) {
+        const key = `${p.id}-hub`;
+        const routed = routedId === p.id;
+        const hqV = orient(hqBase.get(p.id)!, phi);
+        if (routed && hqV.z > 0.02) {
+          setRoute(key, buildRoute(hqBase.get(p.id)!, hubBase, phi, routeProgress));
+        } else {
+          setRoute(key, "");
+        }
+      }
+      if (routedId && routeProgress >= 1 && s.routeFiredFor !== routedId) {
+        s.routeFiredFor = routedId;
+        s.hubPulseUntil = now + HUB_PULSE_MS;
+        onRouteCompleteRef.current?.(routedId);
+      }
+
+      // 6) hub marker + pulse
+      const hub = hubRef.current;
+      if (hub) {
+        const hv = orient(hubBase, phi);
+        const hFront = hv.z > 0.02;
+        hub.style.transform = `translate(-50%,-50%) translate(${cx + hv.x * r}px,${
+          cy - hv.y * r
+        }px)`;
+        hub.style.opacity = hFront ? "1" : "0";
+        const hubPulse = hubPulseRef.current;
+        if (hubPulse) {
+          const pulsing = hFront && now < s.hubPulseUntil;
+          hubPulse.style.transform = hub.style.transform;
+          hubPulse.style.opacity = pulsing ? "1" : "0";
+        }
+      }
+
+      // 7) featured spotlight pulse (on the featured entity's chip, idle only)
       const pulse = pulseRef.current;
       if (pulse) {
         if (feat && !sel && hi.size === 0) {
@@ -385,6 +441,8 @@ export function PartnerGlobe({
           featuredIdx += 1;
           s.featuredId = next.id;
           s.featuredSince = now;
+          s.routeStart = now;
+          s.routeFiredFor = null;
           aimAt(next.hq.lng);
           onFeatureRef.current?.(next.id);
         }
@@ -449,14 +507,14 @@ export function PartnerGlobe({
       window.removeEventListener("pointerup", onPointerUp);
       canvas.removeEventListener("wheel", onWheel);
     };
-  }, [partners]);
+  }, [entities]);
 
   return (
     <div
       ref={wrapRef}
       className={`relative aspect-square w-full select-none ${className ?? ""}`}
       role="group"
-      aria-label="Interactive globe of partner locations"
+      aria-label="Interactive globe of our global network"
     >
       {/* soft atmospheric glow */}
       <div
@@ -476,26 +534,23 @@ export function PartnerGlobe({
         aria-hidden
       />
 
-      {/* curved great-circle routes (engineering red, drawn progressively) */}
+      {/* curved great-circle routes (engineering red, drawn progressively) — all converge on Hyderabad */}
       <svg
         ref={routeSvgRef}
         className="pointer-events-none absolute inset-0 h-full w-full"
         aria-hidden
       >
-        {partners.flatMap(
-          (p) =>
-            p.offices?.map((_, i) => (
-              <path
-                key={`${p.id}-${i}`}
-                data-route={`${p.id}-${i}`}
-                fill="none"
-                stroke="var(--eng-red)"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeDasharray="1.5 5"
-              />
-            )) ?? []
-        )}
+        {entities.map((p) => (
+          <path
+            key={p.id}
+            data-route={`${p.id}-hub`}
+            fill="none"
+            stroke="var(--eng-red)"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeDasharray="1.5 5"
+          />
+        ))}
       </svg>
 
       {/* leader lines from displaced logo chips back to their true point */}
@@ -504,7 +559,7 @@ export function PartnerGlobe({
         className="pointer-events-none absolute inset-0 h-full w-full"
         aria-hidden
       >
-        {partners.map((p) => (
+        {entities.map((p) => (
           <line
             key={p.id}
             data-leader={p.id}
@@ -526,8 +581,30 @@ export function PartnerGlobe({
         <span className="absolute inset-[3px] rounded-full bg-primary/70" />
       </span>
 
+      {/* Phoenix Hyderabad hub — every collaboration route converges here */}
+      <span
+        ref={hubPulseRef}
+        className="pointer-events-none absolute left-0 top-0 z-[34] block h-5 w-5 rounded-full opacity-0"
+        aria-hidden
+      >
+        <span className="absolute inset-0 animate-ping rounded-full bg-[var(--eng-red)]/45" />
+        <span className="absolute inset-[4px] rounded-full bg-[var(--eng-red)]/80" />
+      </span>
+      <div
+        ref={hubRef}
+        className="pointer-events-none absolute left-0 top-0 z-[36] flex flex-col items-center opacity-0"
+        aria-hidden
+      >
+        <span className="relative flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-primary bg-white shadow-[0_0_0_4px_white,0_0_0_5px_rgb(0_120_243/30%)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+        </span>
+        <span className="tech-label mt-1.5 whitespace-nowrap rounded-full border border-border bg-white/95 px-2 py-0.5 text-[9px] text-primary shadow-sm">
+          Phoenix · Hyderabad
+        </span>
+      </div>
+
       {/* HQ true-location markers (filled diamonds) */}
-      {partners.map((p) => (
+      {entities.map((p) => (
         <span
           key={p.id}
           ref={(el) => {
@@ -539,8 +616,8 @@ export function PartnerGlobe({
         />
       ))}
 
-      {/* HQ chips — the partner logos ARE the markers */}
-      {partners.map((p) => (
+      {/* HQ chips — logo when available, otherwise the company name */}
+      {entities.map((p) => (
         <button
           key={p.id}
           ref={(el) => {
@@ -552,25 +629,31 @@ export function PartnerGlobe({
           onFocus={() => onSelect(p.id)}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(selectedId === p.id ? null : p.id);
+            onSelect(lockedId === p.id ? null : p.id);
           }}
           aria-label={`${p.name} — headquarters in ${p.hq.city}, ${p.hq.country}`}
           className="absolute left-0 top-0 flex h-9 items-center rounded-full border border-border bg-white/95 px-2.5 shadow-[0_1px_8px_rgba(15,40,90,0.10)] backdrop-blur-sm transition-[opacity,box-shadow] duration-300 will-change-transform hover:border-primary/60 hover:shadow-[0_0_0_1px_rgb(0_120_243/35%),0_4px_18px_rgb(0_120_243/22%)] focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
           style={{ opacity: 0 }}
         >
-          <Image
-            src={p.logo}
-            alt=""
-            width={72}
-            height={24}
-            loading="lazy"
-            className="h-5 w-auto max-w-[84px] object-contain"
-          />
+          {p.logo ? (
+            <Image
+              src={p.logo}
+              alt=""
+              width={72}
+              height={24}
+              loading="lazy"
+              className="h-5 w-auto max-w-[84px] object-contain"
+            />
+          ) : (
+            <span className="max-w-[110px] truncate text-xs font-medium text-foreground">
+              {p.name}
+            </span>
+          )}
         </button>
       ))}
 
       {/* regional office dots (smaller, hollow) */}
-      {partners.flatMap(
+      {entities.flatMap(
         (p) =>
           p.offices?.map((o, i) => (
             <span

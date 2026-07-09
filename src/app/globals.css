@@ -145,8 +145,10 @@
   --brand-sky: #7dc9e9;
   --brand-green: #a2d6b7;
   --brand-purple: #b888bd;
-  /* muted engineering red — connection routes / active network */
-  --eng-red: #b0554b;
+  /* engineering red — connection routes / active network. Brightened from
+     #b0554b for contrast against the pale blueprint background; still a
+     restrained, desaturated red rather than a harsh warning color. */
+  --eng-red: #c8493a;
 }
 
 .phoenix ::selection {
