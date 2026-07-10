@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
+import { PageTransitionProvider } from "@/components/page-transition";
 import "./globals.css";
 
 // Brand typeface is Untitled Sans (Klim, licensed). Inter is the web
@@ -31,7 +32,9 @@ export default function RootLayout({
       lang="en"
       className={`${interSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="phoenix min-h-full flex flex-col">{children}</body>
+      <body className="phoenix min-h-full flex flex-col">
+        <PageTransitionProvider>{children}</PageTransitionProvider>
+      </body>
     </html>
   );
 }
