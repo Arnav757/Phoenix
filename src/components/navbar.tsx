@@ -3,18 +3,24 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useMotionValueEvent, useScroll } from "motion/react";
+import { useMotionValueEvent, useScroll } from "motion/react";
 import { sections } from "@/lib/content";
 import { Button } from "@/components/ui/button";
 
-// Hidden during the intro; fades and slides into place once the intro
-// completes, then stays sticky for the rest of the site.
+// Hidden during the intro; fades into place once the intro completes, then
+// stays sticky for the rest of the site. Deliberately opacity-only (no
+// translate) while hidden — the intro's entry logo FLIP-animates to this
+// exact element's on-screen rect, which only holds true if the rect never
+// moves between the hidden and visible states.
 export function Navbar({
   visible,
   onLogoClick,
+  logoRef,
 }: {
   visible: boolean;
   onLogoClick?: () => void;
+  /** ref to the logo wrapper — the intro reads its rect for the logo hand-off */
+  logoRef?: React.Ref<HTMLDivElement>;
 }) {
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
@@ -22,14 +28,8 @@ export function Navbar({
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 40));
 
   return (
-    <motion.header
-      initial={false}
-      animate={
-        visible
-          ? { y: 0, opacity: 1 }
-          : { y: -72, opacity: 0 }
-      }
-      transition={{ duration: 0.9, delay: visible ? 0.45 : 0, ease: [0.22, 1, 0.36, 1] }}
+    <header
+      style={{ transition: "opacity 0.5s cubic-bezier(0.22,1,0.36,1)", opacity: visible ? 1 : 0 }}
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
         visible ? "" : "pointer-events-none"
       } ${
@@ -48,25 +48,29 @@ export function Navbar({
             onClick={onLogoClick}
             aria-label="Phoenix Group — replay introduction"
           >
-            <Image
-              src="/phoenix/images/phoenix_logo.png"
-              alt="Phoenix Group"
-              width={120}
-              height={40}
-              className="h-9 w-auto"
-              priority
-            />
+            <div ref={logoRef}>
+              <Image
+                src="/phoenix/images/phoenix_logo.png"
+                alt="Phoenix Group"
+                width={120}
+                height={40}
+                className="h-9 w-auto"
+                priority
+              />
+            </div>
           </button>
         ) : (
           <Link href="/" aria-label="Phoenix Group — home">
-            <Image
-              src="/phoenix/images/phoenix_logo.png"
-              alt="Phoenix Group"
-              width={120}
-              height={40}
-              className="h-9 w-auto"
-              priority
-            />
+            <div ref={logoRef}>
+              <Image
+                src="/phoenix/images/phoenix_logo.png"
+                alt="Phoenix Group"
+                width={120}
+                height={40}
+                className="h-9 w-auto"
+                priority
+              />
+            </div>
           </Link>
         )}
         <div className="hidden items-center gap-7 lg:flex">
@@ -93,6 +97,6 @@ export function Navbar({
           Let&apos;s Connect
         </Button>
       </nav>
-    </motion.header>
+    </header>
   );
 }

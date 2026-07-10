@@ -4,49 +4,71 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { useReducedMotion } from "motion/react";
-import { company } from "@/lib/content";
+import { DraftingMarks } from "./drafting-marks";
 
-// One-time cinematic intro (single-scroll variant).
+// Cinematic homepage entry — an architectural presentation unveiling itself,
+// not a loading screen. A fixed overlay above the site, never part of the
+// scroll flow:
 //
-// A fixed overlay above the site — never part of the scroll flow.
-// 1. Landing: static first frame, headline, branding, scroll cue. Nav hidden.
-// 2. First downward scroll (or tap / key / click) starts the video, which
-//    plays ONCE at film pace; further scroll input is ignored during playback.
-// 3. On end: GSAP closes a white veil and fades the overlay, revealing the
-//    site beneath; onComplete hands control to the main website.
+// 1. ENTRY: minimal — blueprint background, a large centered Phoenix logo,
+//    faint static drafting marks, a quiet "click anywhere" cue. No nav, no
+//    autoplay, no copy. The visitor is standing in front of the drawing.
+// 2. On click (or Enter/Space) anywhere on screen: the blueprint intensifies,
+//    drafting marks (guide lines, dimension ticks, coordinate/survey points,
+//    construction circles) draw themselves in over ~1.6s while the logo
+//    holds perfectly still at center.
+// 3. The blueprint dissolves into the uploaded construction-simulation video
+//    for the session's featured project, playing once at its own pace.
+// 4. On the video's natural end, it blends into the finished project
+//    photograph (clip-path reveal, same "as built" language used on project
+//    pages).
+// 5. The logo — never recolored, distorted, rotated or morphed, only ever
+//    translated/uniformly scaled — animates from its large centered position
+//    into its exact home in the navigation bar (measured live from the real
+//    navbar element), while the rest of the overlay dissolves.
+// 6. The navbar fades in at the same position the intro logo just vacated;
+//    the homepage is fully interactive.
 //
-// Safety: video error, blocked autoplay, or a stalled pipeline all finish
-// the intro instead of trapping the user. "Skip intro" is always available.
-// Reduced motion skips straight to the site.
+// The ~1.5–2s cinematic beats in the brief govern the two blueprint/logo
+// choreography passages that bookend the video (steps 2 and 5) — the
+// uploaded construction videos themselves run their own real length (the
+// Aquila/Equinox clips are ~10–15s) and are never cut short.
 //
-// Hardening: onComplete (the state flip that unmounts this overlay, reveals
-// the navbar and restores scrolling) must never depend solely on a GSAP
-// timeline's onComplete callback — if that timeline is ever delayed or
-// dropped (backgrounded tab, a slow device, an unrelated GSAP error), the
-// site would stay locked forever. A hard fallback timer guarantees
-// completion fires regardless. Skip runs the same veil/fade language as a
-// natural finish, just compressed, so it reads as instant.
-const FINISH_DURATION = { veil: 0.9, gap: 0.15, fade: 0.8 }; // natural end-of-video
-const SKIP_DURATION = { veil: 0.22, gap: 0.04, fade: 0.26 }; // "Skip intro"
+// Hardening (carried over from the previous intro): completion never
+// depends solely on a GSAP callback or a video's `ended` event — a hard
+// fallback timer guarantees the site can never stay locked. Reduced motion
+// skips straight to the site. "Skip" is always available, understated.
+const WINDUP_MS = 1600; // blueprint intensifies + drafting draws in
+const CLOSE_MS = 1500; // logo FLIP + overlay dissolve
+const STALL_MS = 8000; // safety: don't trust a video that never gets going
+
 export function IntroExperience({
   onComplete,
   onStart,
-  videoSrc = "/phoenix/videos/hero-scrub.mp4",
+  project,
+  navLogoRef,
 }: {
   onComplete: () => void;
   onStart?: () => void;
-  videoSrc?: string;
+  project: { name: string; video: string; image: string };
+  /** the real navbar logo's wrapper — the intro reads its live rect for the hand-off */
+  navLogoRef?: React.RefObject<HTMLDivElement | null>;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const copyRef = useRef<HTMLDivElement>(null);
-  const cueRef = useRef<HTMLDivElement>(null);
-  const veilRef = useRef<HTMLDivElement>(null);
-  const skipRef = useRef<HTMLButtonElement>(null);
   const reduce = useReducedMotion();
-  const doneRef = useRef(false); // finish() has been entered (guards re-entry)
-  const completedRef = useRef(false); // onComplete has actually fired (guards double-fire)
-  const playingRef = useRef(false);
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const draftRef = useRef<SVGSVGElement>(null);
+  const logoWrapRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const photoRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const cueRef = useRef<HTMLDivElement>(null);
+  const cornersRef = useRef<HTMLDivElement>(null);
+
+  const doneRef = useRef(false);
+  const completedRef = useRef(false);
+  const startedRef = useRef(false);
   const finishRef = useRef<(instant?: boolean) => void>(() => {});
   const startRef = useRef<() => void>(() => {});
 
@@ -63,25 +85,57 @@ export function IntroExperience({
     const root = rootRef.current;
     if (!video || !root) return;
 
-    // freeze the page behind the overlay
     const html = document.documentElement;
     const prevOverflow = html.style.overflow;
     html.style.overflow = "hidden";
     window.scrollTo(0, 0);
 
-    video.load();
-
     let stallTimer: ReturnType<typeof setTimeout> | undefined;
 
-    // Fires the state hand-off exactly once, however it gets triggered
-    // (GSAP's onComplete, or the hard fallback timer below).
     const complete = () => {
       if (completedRef.current) return;
       completedRef.current = true;
-      // release the decoder — the overlay is fully hidden by this point
       video.removeAttribute("src");
       video.load();
       onComplete();
+    };
+
+    // measure the real navbar logo and FLIP the intro logo onto it, then
+    // dissolve the rest of the overlay. Falls back to a plain fade in place
+    // if the navbar logo can't be measured for any reason.
+    const closeToNav = (instant: boolean) => {
+      const logo = logoWrapRef.current;
+      const target = navLogoRef?.current;
+      const tl = gsap.timeline({ onComplete: complete });
+      const flipMs = instant ? 260 : 700;
+      const restMs = instant ? 220 : 600;
+      const crossMs = instant ? 220 : 480;
+
+      if (logo && target) {
+        const from = logo.getBoundingClientRect();
+        const to = target.getBoundingClientRect();
+        const scale = to.width / from.width;
+        const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+        const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+        tl.to(
+          logo,
+          { x: dx, y: dy, scale, duration: flipMs / 1000, ease: "power3.inOut" },
+          0
+        );
+      }
+
+      tl.to(
+        [gridRef.current, draftRef.current, photoRef.current, scrimRef.current, cornersRef.current],
+        { opacity: 0, duration: restMs / 1000, ease: "power2.inOut" },
+        0
+      );
+      // the logo itself crossfades out right as it lands, timed to match the
+      // real navbar's own fade-in duration so the hand-off reads continuous
+      tl.to(
+        logo,
+        { opacity: 0, duration: crossMs / 1000, ease: "power1.out" },
+        instant ? flipMs / 1000 : (flipMs - 120) / 1000
+      );
     };
 
     const finish = (instant = false) => {
@@ -89,195 +143,189 @@ export function IntroExperience({
       doneRef.current = true;
       clearTimeout(stallTimer);
       video.pause();
-      // stop every running intro animation before starting the exit — no
-      // stacked/competing tweens on the same targets.
-      gsap.killTweensOf([veilRef.current, root, copyRef.current, cueRef.current]);
-
-      const d = instant ? SKIP_DURATION : FINISH_DURATION;
-      // GSAP hand-off: veil closes over the final frame, then the whole
-      // overlay fades out to reveal the site already in place beneath.
-      // Skip runs the identical language, just compressed, so it still
-      // reads as a transition rather than a hard cut.
-      gsap
-        .timeline({ onComplete: complete })
-        .to(veilRef.current, { opacity: 1, duration: d.veil, ease: "power2.inOut" })
-        .to(root, { opacity: 0, duration: d.fade, ease: "power2.inOut" }, `+=${d.gap}`);
-
-      // Hard fallback: guarantee the site unlocks even if the GSAP timeline
-      // above never fires (dropped rAF frames, a backgrounded tab, etc.).
-      // Never leave scrolling locked or the overlay intercepting clicks.
-      const maxMs = (d.veil + d.gap + d.fade) * 1000 + 600;
+      gsap.killTweensOf([gridRef.current, draftRef.current, logoWrapRef.current, photoRef.current, scrimRef.current, cueRef.current]);
+      closeToNav(instant);
+      // hard fallback — guarantee the site unlocks no matter what
+      const maxMs = (instant ? 260 : 700) + (instant ? 220 : 600) + 700;
       setTimeout(complete, maxMs);
     };
     finishRef.current = finish;
 
-    const startPlayback = () => {
-      if (playingRef.current || doneRef.current) return;
-      playingRef.current = true;
-      onStart?.(); // NOT_STARTED → PLAYING
-      // copy and cue retire as the film begins
-      gsap.to(copyRef.current, {
-        opacity: 0,
-        y: -40,
-        duration: 1.4,
-        ease: "power2.out",
-      });
-      gsap.to(cueRef.current, { opacity: 0, duration: 0.5, ease: "power1.out" });
+    const strokes = draftRef.current?.querySelectorAll<SVGGeometryElement>("[data-draft-line]");
+    strokes?.forEach((el) => {
+      const len = el.getTotalLength();
+      gsap.set(el, { strokeDasharray: len, strokeDashoffset: len });
+    });
+
+    const onVideoEnded = () => {
+      // blend from the simulation into the finished photograph
+      gsap.to(photoRef.current, { opacity: 1, duration: 1.4, ease: "power2.inOut" });
+      window.setTimeout(() => finish(false), 1700);
+    };
+    const onVideoError = () => finish(false);
+
+    const beginPlayback = () => {
+      if (startedRef.current || doneRef.current) return;
+      startedRef.current = true;
+      onStart?.();
+
+      gsap.to(cueRef.current, { opacity: 0, duration: 0.35, ease: "power1.out" });
+
+      const windup = gsap.timeline();
+      // 1) blueprint intensifies, drafting marks draw themselves in
+      windup.to(gridRef.current, { opacity: 1, duration: WINDUP_MS / 1000 / 2, ease: "power2.out" }, 0);
+      const draftLines = draftRef.current?.querySelectorAll<SVGElement>("[data-draft]");
+      if (draftLines?.length) {
+        windup.to(draftLines, { opacity: 1, duration: 0.55, stagger: 0.045, ease: "power2.out" }, 0.1);
+      }
+      if (strokes?.length) {
+        windup.to(strokes, { strokeDashoffset: 0, duration: 0.75, stagger: 0.06, ease: "power3.out" }, 0.15);
+      }
+      windup.to(scrimRef.current, { opacity: 1, duration: 0.6, ease: "power2.out" }, WINDUP_MS / 1000 - 0.5);
+
+      // 2) video starts muted underneath, then crossfades in as the
+      //    blueprint recedes to a faint frame around the footage
       const p = video.play();
-      if (p) p.catch(() => finish()); // autoplay refused → enter the site instead
-      // stalled media pipeline → don't trap the user
+      if (p) p.catch(() => finish(false));
+      windup.to(video, { opacity: 1, duration: 0.7, ease: "power2.inOut" }, WINDUP_MS / 1000 - 0.6);
+      windup.to(gridRef.current, { opacity: 0.35, duration: 0.7, ease: "power2.inOut" }, WINDUP_MS / 1000 - 0.6);
+      windup.to(draftRef.current, { opacity: 0, duration: 0.7, ease: "power2.inOut" }, WINDUP_MS / 1000 - 0.5);
+
       stallTimer = setTimeout(() => {
-        if (video.currentTime < 0.5) finish();
-      }, 6000);
+        if (video.currentTime < 0.4) finish(false);
+      }, STALL_MS);
     };
-    startRef.current = startPlayback;
+    startRef.current = beginPlayback;
 
-    const onEnded = () => finish();
-    const onError = () => finish();
-    video.addEventListener("ended", onEnded);
-    video.addEventListener("error", onError);
+    video.addEventListener("ended", onVideoEnded);
+    video.addEventListener("error", onVideoError);
 
-    // --- input: first downward gesture starts the film; everything else is
-    // swallowed so scrolling can't interrupt or skip the playback ---
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (e.deltaY > 0) startPlayback();
-    };
-    let touchY = 0;
-    const onTouchStart = (e: TouchEvent) => {
-      touchY = e.touches[0].clientY;
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      if (touchY - e.touches[0].clientY > 12) startPlayback();
-    };
     const onKey = (e: KeyboardEvent) => {
-      if (["ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
+      if ([" ", "Enter"].includes(e.key)) {
         e.preventDefault();
-        startPlayback();
+        beginPlayback();
       }
       if (e.key === "Escape") finish(true);
     };
-    window.addEventListener("wheel", onWheel, { passive: false });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("keydown", onKey);
 
     return () => {
       clearTimeout(stallTimer);
-      video.removeEventListener("ended", onEnded);
-      video.removeEventListener("error", onError);
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
+      video.removeEventListener("ended", onVideoEnded);
+      video.removeEventListener("error", onVideoError);
       window.removeEventListener("keydown", onKey);
-      gsap.killTweensOf([veilRef.current, root, copyRef.current, cueRef.current]);
+      gsap.killTweensOf([gridRef.current, draftRef.current, logoWrapRef.current, photoRef.current, scrimRef.current, cueRef.current, video]);
       html.style.overflow = prevOverflow;
     };
-  }, [reduce, onComplete, onStart]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduce, onComplete, onStart, navLogoRef]);
 
-  const words = company.tagline.split(" ");
+  // preload quietly whenever the featured project (video) is set/changes —
+  // decoupled from the setup effect above so a project swap (the random
+  // pick lands a moment after mount) never tears down and rebinds the
+  // whole intro, it just kicks off loading the right file.
+  useEffect(() => {
+    videoRef.current?.load();
+  }, [project.video]);
 
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[60] overflow-hidden bg-[oklch(0.2_0.04_260)]"
+      className="fixed inset-0 z-[60] overflow-hidden bg-background"
       aria-label="Introduction"
       onClick={() => startRef.current()}
     >
-      <video
-        ref={videoRef}
-        src={videoSrc}
-        preload="auto"
-        muted
-        playsInline
-        disablePictureInPicture
-        controls={false}
-        className="absolute inset-0 h-full w-full object-cover"
+      {/* blueprint presentation sheet */}
+      <div className="bp-grid absolute inset-0 opacity-[0.35]" aria-hidden />
+      <div
+        ref={gridRef}
+        className="bp-grid absolute inset-0 opacity-0"
+        style={{
+          maskImage: "radial-gradient(65% 60% at 50% 50%, black 0%, transparent 88%)",
+          WebkitMaskImage: "radial-gradient(65% 60% at 50% 50%, black 0%, transparent 88%)",
+        }}
+        aria-hidden
       />
-      {/* readability scrim */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[oklch(0.25_0.06_260)]/55 via-[oklch(0.25_0.06_260)]/25 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[oklch(0.25_0.06_260)]/35 to-transparent" />
+      <div ref={cornersRef} aria-hidden>
+        <span className="absolute left-5 top-5 h-4 w-4 border-l border-t border-primary/45" />
+        <span className="absolute bottom-5 right-5 h-4 w-4 border-b border-r border-primary/45" />
+      </div>
 
-      {/* branding */}
-      <div className="absolute left-6 top-5 z-10">
-        <Image
-          src="/phoenix/images/phoenix_logo.png"
-          alt="Phoenix Group"
-          width={120}
-          height={40}
-          className="h-9 w-auto brightness-0 invert"
-          priority
+      {/* drafting marks — draw in on click, recede once the film takes over */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <DraftingMarks
+          ref={draftRef}
+          className="h-[68vmin] w-[68vmin] max-h-[560px] max-w-[560px] opacity-0"
         />
       </div>
+
+      {/* construction simulation — muted, silent until clicked, plays once */}
+      <video
+        ref={videoRef}
+        src={project.video}
+        muted
+        playsInline
+        preload="auto"
+        disablePictureInPicture
+        controls={false}
+        className="absolute inset-0 h-full w-full object-cover opacity-0"
+        aria-label={`${project.name} construction simulation`}
+      />
+      {/* legibility scrim while the film plays */}
+      <div
+        ref={scrimRef}
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[oklch(0.2_0.04_260)]/45 via-transparent to-[oklch(0.2_0.04_260)]/20 opacity-0"
+        aria-hidden
+      />
+      {/* finished photograph — blends in as the simulation ends */}
+      <div ref={photoRef} className="absolute inset-0 opacity-0" aria-hidden>
+        <Image src={project.image} alt="" fill sizes="100vw" className="object-cover" priority />
+        <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.2_0.04_260)]/35 to-transparent" />
+      </div>
+
+      {/* the logo — perfectly centered, fades in only, never distorted or
+          rotated; this exact element FLIPs into the navbar at the close */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          ref={logoWrapRef}
+          className="relative opacity-0"
+          style={{ animation: "intro-fade 1s ease-out 0.15s forwards" }}
+        >
+          <Image
+            src="/phoenix/images/phoenix_logo.png"
+            alt="Phoenix Group"
+            width={280}
+            height={94}
+            className="h-20 w-auto md:h-24"
+            priority
+          />
+        </div>
+      </div>
+
+      {/* click-anywhere cue */}
+      <div
+        ref={cueRef}
+        className="pointer-events-none absolute inset-x-0 bottom-14 flex flex-col items-center gap-3 opacity-0"
+        style={{ animation: "intro-fade 1s ease-out 0.9s forwards" }}
+      >
+        <span className="relative flex h-9 w-9 items-center justify-center">
+          <span className="absolute inset-0 animate-ping rounded-full border border-primary/50" />
+          <span className="absolute inset-2 rounded-full border border-primary/60" />
+        </span>
+        <span className="tech-label text-muted-foreground">Click anywhere</span>
+      </div>
+
+      {/* understated escape hatch — never trap the visitor */}
       <button
-        ref={skipRef}
         onClick={(e) => {
           e.stopPropagation();
           finishRef.current(true);
         }}
-        className="tech-label absolute right-6 top-6 z-10 rounded-full border border-white/40 px-4 py-2 text-white/80 transition-colors hover:border-white hover:text-white"
+        className="tech-label absolute right-6 top-6 z-10 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+        style={{ animation: "intro-fade 1s ease-out 0.9s forwards", opacity: 0 }}
       >
-        Skip intro →
+        Skip
       </button>
-
-      {/* first-frame copy */}
-      <div ref={copyRef} className="relative z-10 h-full">
-        <div className="mx-auto flex h-full max-w-7xl flex-col justify-center px-6">
-          <p
-            className="tech-label text-white/85 opacity-0"
-            style={{ animation: "intro-fade 1.2s ease-out 0.7s forwards" }}
-          >
-            Phoenix Group · Hyderabad · est. 2001
-          </p>
-          <h1 className="mt-6 max-w-5xl text-5xl font-semibold leading-[1.05] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(10,30,70,0.35)] md:text-7xl lg:text-8xl">
-            {words.map((w, i) => (
-              <span
-                key={i}
-                className="mr-[0.26em] inline-block overflow-hidden pb-1 align-top last:mr-0"
-              >
-                <span
-                  className="inline-block translate-y-[110%]"
-                  style={{
-                    animation: `intro-rise 1.3s cubic-bezier(0.22,1,0.36,1) ${
-                      0.9 + i * 0.16
-                    }s forwards`,
-                  }}
-                >
-                  {w}
-                </span>
-              </span>
-            ))}
-          </h1>
-          <p
-            className="mt-8 max-w-xl text-lg text-white/90 opacity-0"
-            style={{ animation: "intro-fade 1.2s ease-out 2.1s forwards" }}
-          >
-            {company.intro}
-          </p>
-        </div>
-      </div>
-
-      {/* call to action: first scroll begins the film */}
-      <div
-        ref={cueRef}
-        className="absolute inset-x-0 bottom-8 z-10 flex flex-col items-center gap-3 opacity-0"
-        style={{ animation: "intro-fade 1.2s ease-out 2.6s forwards" }}
-      >
-        <span className="tech-label text-white/85">
-          Scroll to begin the story
-        </span>
-        <span className="block h-10 w-6 animate-bounce rounded-full border border-white/70 bg-white/10 backdrop-blur-sm">
-          <span className="mx-auto mt-2 block h-2 w-px bg-white" />
-        </span>
-      </div>
-
-      {/* closing veil — morphs the intro into the website */}
-      <div
-        ref={veilRef}
-        className="pointer-events-none absolute inset-0 z-20 bg-background opacity-0"
-        aria-hidden
-      />
     </div>
   );
 }
