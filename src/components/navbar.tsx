@@ -30,16 +30,16 @@ export function Navbar({
   return (
     <header
       style={{ transition: "opacity 0.5s cubic-bezier(0.22,1,0.36,1)", opacity: visible ? 1 : 0 }}
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
+      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
         visible ? "" : "pointer-events-none"
       } ${
         scrolled
-          ? "bg-background/80 backdrop-blur-md border-b border-border"
-          : "bg-transparent"
+          ? "bg-background/70 backdrop-blur-md border-b border-border/60"
+          : "bg-background/25 backdrop-blur-sm border-b border-transparent"
       }`}
       aria-hidden={!visible}
     >
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <nav className="mx-auto flex w-[92vw] max-w-[1720px] items-center justify-between py-4">
         {/* Logo: on the homepage it replays the intro; elsewhere it is a
             client-side link home (no full reload, so the intro never replays). */}
         {onLogoClick ? (

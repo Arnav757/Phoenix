@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { useReducedMotion } from "motion/react";
 import { DraftingMarks } from "./drafting-marks";
+import { ArchitecturalPhoenix } from "./intro-scenes/architectural-phoenix";
 
 // Cinematic homepage entry — an architectural presentation unveiling itself,
 // not a loading screen. A fixed overlay above the site, never part of the
@@ -13,44 +14,35 @@ import { DraftingMarks } from "./drafting-marks";
 // 1. ENTRY: minimal — blueprint background, a large centered Phoenix logo,
 //    faint static drafting marks, a quiet "click anywhere" cue. No nav, no
 //    autoplay, no copy. The visitor is standing in front of the drawing.
-// 2. On click (or Enter/Space) anywhere on screen: the blueprint intensifies,
-//    drafting marks (guide lines, dimension ticks, coordinate/survey points,
-//    construction circles) draw themselves in over ~1.6s while the logo
-//    holds perfectly still at center.
-// 3. The blueprint dissolves into the uploaded construction-simulation video
-//    for the session's featured project, playing once at its own pace.
-// 4. On the video's natural end, it blends into the finished project
-//    photograph (clip-path reveal, same "as built" language used on project
-//    pages).
-// 5. The logo — never recolored, distorted, rotated or morphed, only ever
+// 2. On click (or Enter/Space): drafting marks (guide lines, dimension
+//    ticks, coordinate/survey points, construction circles) draw themselves
+//    in over ~1.6s while the logo holds perfectly still at center. (Scene 01)
+// 3. The <IntroScene/> slot runs its own sequence — currently the abstract
+//    architectural Phoenix bird (Scenes 02-05). This slot is a swappable
+//    component: replace it later with a Lottie file, transparent WebM, PNG
+//    sequence or Three.js scene by implementing the same {active, onComplete}
+//    interface (see intro-scenes/architectural-phoenix.tsx). Nothing else
+//    about the intro/nav/state code has to change.
+// 4. The logo — never recolored, distorted, rotated or morphed, only ever
 //    translated/uniformly scaled — animates from its large centered position
 //    into its exact home in the navigation bar (measured live from the real
-//    navbar element), while the rest of the overlay dissolves.
-// 6. The navbar fades in at the same position the intro logo just vacated;
+//    navbar element), while the rest of the overlay dissolves. (Scene 06)
+// 5. The navbar fades in at the same position the intro logo just vacated;
 //    the homepage is fully interactive.
 //
-// The ~1.5–2s cinematic beats in the brief govern the two blueprint/logo
-// choreography passages that bookend the video (steps 2 and 5) — the
-// uploaded construction videos themselves run their own real length (the
-// Aquila/Equinox clips are ~10–15s) and are never cut short.
-//
-// Hardening (carried over from the previous intro): completion never
-// depends solely on a GSAP callback or a video's `ended` event — a hard
-// fallback timer guarantees the site can never stay locked. Reduced motion
-// skips straight to the site. "Skip" is always available, understated.
-const WINDUP_MS = 1600; // blueprint intensifies + drafting draws in
-const CLOSE_MS = 1500; // logo FLIP + overlay dissolve
-const STALL_MS = 8000; // safety: don't trust a video that never gets going
+// Hardening (carried over from earlier iterations): completion never
+// depends solely on a GSAP callback — a hard fallback timer guarantees the
+// site can never stay locked. Reduced motion skips straight to the site.
+// "Skip" is always available, understated.
+const WINDUP_MS = 1600; // Scene 01 — drafting marks draw themselves in
 
 export function IntroExperience({
   onComplete,
   onStart,
-  project,
   navLogoRef,
 }: {
   onComplete: () => void;
   onStart?: () => void;
-  project: { name: string; video: string; image: string };
   /** the real navbar logo's wrapper — the intro reads its live rect for the hand-off */
   navLogoRef?: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -59,10 +51,8 @@ export function IntroExperience({
   const rootRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef<SVGSVGElement>(null);
+  const birdWrapRef = useRef<HTMLDivElement>(null);
   const logoWrapRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const photoRef = useRef<HTMLDivElement>(null);
-  const scrimRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
   const cornersRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +61,11 @@ export function IntroExperience({
   const startedRef = useRef(false);
   const finishRef = useRef<(instant?: boolean) => void>(() => {});
   const startRef = useRef<() => void>(() => {});
+
+  // false until the user clicks — this is what tells the bird scene to
+  // start its own timeline. Kept as React state (not just a ref) so the
+  // scene component's `active` prop re-renders it correctly.
+  const [sceneActive, setSceneActive] = useState(false);
 
   useEffect(() => {
     if (reduce) {
@@ -81,24 +76,13 @@ export function IntroExperience({
       return;
     }
 
-    const video = videoRef.current;
     const root = rootRef.current;
-    if (!video || !root) return;
+    if (!root) return;
 
     const html = document.documentElement;
     const prevOverflow = html.style.overflow;
     html.style.overflow = "hidden";
     window.scrollTo(0, 0);
-
-    let stallTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const complete = () => {
-      if (completedRef.current) return;
-      completedRef.current = true;
-      video.removeAttribute("src");
-      video.load();
-      onComplete();
-    };
 
     // measure the real navbar logo and FLIP the intro logo onto it, then
     // dissolve the rest of the overlay. Falls back to a plain fade in place
@@ -125,12 +109,10 @@ export function IntroExperience({
       }
 
       tl.to(
-        [gridRef.current, draftRef.current, photoRef.current, scrimRef.current, cornersRef.current],
+        [gridRef.current, draftRef.current, birdWrapRef.current, cornersRef.current],
         { opacity: 0, duration: restMs / 1000, ease: "power2.inOut" },
         0
       );
-      // the logo itself crossfades out right as it lands, timed to match the
-      // real navbar's own fade-in duration so the hand-off reads continuous
       tl.to(
         logo,
         { opacity: 0, duration: crossMs / 1000, ease: "power1.out" },
@@ -138,12 +120,16 @@ export function IntroExperience({
       );
     };
 
+    const complete = () => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      onComplete();
+    };
+
     const finish = (instant = false) => {
       if (doneRef.current) return;
       doneRef.current = true;
-      clearTimeout(stallTimer);
-      video.pause();
-      gsap.killTweensOf([gridRef.current, draftRef.current, logoWrapRef.current, photoRef.current, scrimRef.current, cueRef.current]);
+      gsap.killTweensOf([gridRef.current, draftRef.current, birdWrapRef.current, logoWrapRef.current, cueRef.current]);
       closeToNav(instant);
       // hard fallback — guarantee the site unlocks no matter what
       const maxMs = (instant ? 260 : 700) + (instant ? 220 : 600) + 700;
@@ -157,22 +143,19 @@ export function IntroExperience({
       gsap.set(el, { strokeDasharray: len, strokeDashoffset: len });
     });
 
-    const onVideoEnded = () => {
-      // blend from the simulation into the finished photograph
-      gsap.to(photoRef.current, { opacity: 1, duration: 1.4, ease: "power2.inOut" });
-      window.setTimeout(() => finish(false), 1700);
-    };
-    const onVideoError = () => finish(false);
-
     const beginPlayback = () => {
       if (startedRef.current || doneRef.current) return;
       startedRef.current = true;
       onStart?.();
 
       gsap.to(cueRef.current, { opacity: 0, duration: 0.35, ease: "power1.out" });
+      // Logo fades out as the drawing takes over — the bird is Scene 02-05's
+      // subject on its own; the logo reappears in Scene 05 as the bird
+      // dissolves back into it, so the two never share the frame.
+      gsap.to(logoWrapRef.current, { opacity: 0, duration: 0.55, ease: "power1.inOut" });
 
+      // Scene 01 — blueprint intensifies, drafting marks stroke-draw in.
       const windup = gsap.timeline();
-      // 1) blueprint intensifies, drafting marks draw themselves in
       windup.to(gridRef.current, { opacity: 1, duration: WINDUP_MS / 1000 / 2, ease: "power2.out" }, 0);
       const draftLines = draftRef.current?.querySelectorAll<SVGElement>("[data-draft]");
       if (draftLines?.length) {
@@ -181,24 +164,15 @@ export function IntroExperience({
       if (strokes?.length) {
         windup.to(strokes, { strokeDashoffset: 0, duration: 0.75, stagger: 0.06, ease: "power3.out" }, 0.15);
       }
-      windup.to(scrimRef.current, { opacity: 1, duration: 0.6, ease: "power2.out" }, WINDUP_MS / 1000 - 0.5);
 
-      // 2) video starts muted underneath, then crossfades in as the
-      //    blueprint recedes to a faint frame around the footage
-      const p = video.play();
-      if (p) p.catch(() => finish(false));
-      windup.to(video, { opacity: 1, duration: 0.7, ease: "power2.inOut" }, WINDUP_MS / 1000 - 0.6);
-      windup.to(gridRef.current, { opacity: 0.35, duration: 0.7, ease: "power2.inOut" }, WINDUP_MS / 1000 - 0.6);
-      windup.to(draftRef.current, { opacity: 0, duration: 0.7, ease: "power2.inOut" }, WINDUP_MS / 1000 - 0.5);
+      // Kick off Scenes 02-05 — the scene component owns its own timing.
+      windup.call(() => setSceneActive(true), undefined, WINDUP_MS / 1000 - 0.15);
 
-      stallTimer = setTimeout(() => {
-        if (video.currentTime < 0.4) finish(false);
-      }, STALL_MS);
+      // As the bird takes over, the drafting overlay recedes to a faint
+      // frame so the two scenes read as one continuous drawing.
+      windup.to(draftRef.current, { opacity: 0.35, duration: 0.6, ease: "power2.inOut" }, WINDUP_MS / 1000);
     };
     startRef.current = beginPlayback;
-
-    video.addEventListener("ended", onVideoEnded);
-    video.addEventListener("error", onVideoError);
 
     const onKey = (e: KeyboardEvent) => {
       if ([" ", "Enter"].includes(e.key)) {
@@ -210,23 +184,22 @@ export function IntroExperience({
     window.addEventListener("keydown", onKey);
 
     return () => {
-      clearTimeout(stallTimer);
-      video.removeEventListener("ended", onVideoEnded);
-      video.removeEventListener("error", onVideoError);
       window.removeEventListener("keydown", onKey);
-      gsap.killTweensOf([gridRef.current, draftRef.current, logoWrapRef.current, photoRef.current, scrimRef.current, cueRef.current, video]);
+      gsap.killTweensOf([gridRef.current, draftRef.current, birdWrapRef.current, logoWrapRef.current, cueRef.current]);
       html.style.overflow = prevOverflow;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduce, onComplete, onStart, navLogoRef]);
 
-  // preload quietly whenever the featured project (video) is set/changes —
-  // decoupled from the setup effect above so a project swap (the random
-  // pick lands a moment after mount) never tears down and rebinds the
-  // whole intro, it just kicks off loading the right file.
-  useEffect(() => {
-    videoRef.current?.load();
-  }, [project.video]);
+  // Scene 05 handoff — once the bird sequence has finished dispersing, the
+  // logo has already been sitting behind it at low opacity, so we brighten
+  // it, then FLIP it into the navbar (Scene 06 = the same closeToNav path).
+  const handleSceneComplete = () => {
+    if (doneRef.current) return;
+    gsap.to(logoWrapRef.current, { opacity: 1, duration: 0.6, ease: "power2.out" });
+    // hold at peak for a beat, then hand off to the navbar
+    window.setTimeout(() => finishRef.current(false), 600);
+  };
 
   return (
     <div
@@ -251,7 +224,8 @@ export function IntroExperience({
         <span className="absolute bottom-5 right-5 h-4 w-4 border-b border-r border-primary/45" />
       </div>
 
-      {/* drafting marks — draw in on click, recede once the film takes over */}
+      {/* Scene 01 — drafting marks. Draw in when the visitor clicks, then
+          recede to a faint frame as the bird scene takes over. */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <DraftingMarks
           ref={draftRef}
@@ -259,32 +233,23 @@ export function IntroExperience({
         />
       </div>
 
-      {/* construction simulation — muted, silent until clicked, plays once */}
-      <video
-        ref={videoRef}
-        src={project.video}
-        muted
-        playsInline
-        preload="auto"
-        disablePictureInPicture
-        controls={false}
-        className="absolute inset-0 h-full w-full object-cover opacity-0"
-        aria-label={`${project.name} construction simulation`}
-      />
-      {/* legibility scrim while the film plays */}
+      {/* Scenes 02-05 — the swappable animation slot. This is where a
+          Lottie / transparent WebM / Three.js scene would drop in later
+          with no other changes. */}
       <div
-        ref={scrimRef}
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[oklch(0.2_0.04_260)]/45 via-transparent to-[oklch(0.2_0.04_260)]/20 opacity-0"
-        aria-hidden
-      />
-      {/* finished photograph — blends in as the simulation ends */}
-      <div ref={photoRef} className="absolute inset-0 opacity-0" aria-hidden>
-        <Image src={project.image} alt="" fill sizes="100vw" className="object-cover" priority />
-        <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.2_0.04_260)]/35 to-transparent" />
+        ref={birdWrapRef}
+        className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      >
+        <ArchitecturalPhoenix
+          active={sceneActive}
+          onComplete={handleSceneComplete}
+          className="h-[70vmin] w-[70vmin] max-h-[620px] max-w-[620px]"
+        />
       </div>
 
-      {/* the logo — perfectly centered, fades in only, never distorted or
-          rotated; this exact element FLIPs into the navbar at the close */}
+      {/* Logo — perfectly centered, fades in with the entry screen; sits
+          behind the bird at full opacity while Scene 05 dissolves the bird,
+          then FLIPs into the navbar for Scene 06. */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div
           ref={logoWrapRef}
