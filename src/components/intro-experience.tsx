@@ -152,6 +152,9 @@ export function IntroExperience({
       // Logo fades out as the drawing takes over — the bird is Scene 02-05's
       // subject on its own; the logo reappears in Scene 05 as the bird
       // dissolves back into it, so the two never share the frame.
+      // Clear the entry CSS animation first — its `forwards` fill-mode pins
+      // opacity at 1 and would otherwise win over GSAP's inline tween.
+      if (logoWrapRef.current) logoWrapRef.current.style.animation = "none";
       gsap.to(logoWrapRef.current, { opacity: 0, duration: 0.55, ease: "power1.inOut" });
 
       // Scene 01 — blueprint intensifies, drafting marks stroke-draw in.

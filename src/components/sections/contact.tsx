@@ -1,12 +1,63 @@
 "use client";
 
+import { useState } from "react";
 import { Reveal, SectionHeading } from "@/components/reveal";
 import { company } from "@/lib/content";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+type SubmitState =
+  | { kind: "idle" }
+  | { kind: "submitting" }
+  | { kind: "ok" }
+  | { kind: "error"; message: string };
+
 export function Contact() {
+  const [state, setState] = useState<SubmitState>({ kind: "idle" });
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (state.kind === "submitting") return;
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    // Honeypot — real browsers leave the hidden `website` field empty.
+    const payload = {
+      name: (data.get("name") ?? "").toString(),
+      email: (data.get("email") ?? "").toString(),
+      phone: (data.get("phone") ?? "").toString(),
+      message: (data.get("message") ?? "").toString(),
+      website: (data.get("website") ?? "").toString(),
+    };
+
+    setState({ kind: "submitting" });
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setState({
+          kind: "error",
+          message: body.error ?? "Could not submit. Please try again.",
+        });
+        return;
+      }
+      setState({ kind: "ok" });
+      form.reset();
+    } catch {
+      setState({
+        kind: "error",
+        message: "Network error. Please try again.",
+      });
+    }
+  }
+
+  const submitting = state.kind === "submitting";
+
   return (
     <section id="contact" className="mx-auto max-w-7xl px-6 py-28 md:py-36">
       <SectionHeading kicker="07 — Contact" title="Let's connect" />
@@ -71,28 +122,87 @@ export function Contact() {
         <Reveal delay={0.15}>
           <form
             className="sheet-corners space-y-5 rounded-lg border border-border bg-card p-8 md:p-10"
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={handleSubmit}
+            noValidate
           >
+            {/* Honeypot — hidden from users, visible to naive bots. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
+            >
+              <label>
+                Website
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </label>
+            </div>
+
             <div className="grid gap-5 sm:grid-cols-2">
-              <Input placeholder="Name*" required aria-label="Name" />
               <Input
+                name="name"
+                placeholder="Name*"
+                required
+                aria-label="Name"
+                autoComplete="name"
+                disabled={submitting}
+              />
+              <Input
+                name="email"
                 placeholder="Email*"
                 type="email"
                 required
                 aria-label="Email"
+                autoComplete="email"
+                disabled={submitting}
               />
             </div>
-            <Input placeholder="Phone* (+91)" type="tel" aria-label="Phone" />
+            <Input
+              name="phone"
+              placeholder="Phone (+91)"
+              type="tel"
+              aria-label="Phone"
+              autoComplete="tel"
+              disabled={submitting}
+            />
             <Textarea
+              name="message"
               placeholder="Enquiry details"
               rows={5}
               aria-label="Enquiry details"
+              disabled={submitting}
             />
-            <Button type="submit" size="lg" className="w-full rounded-full">
-              Submit Enquiry
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full rounded-full"
+              disabled={submitting}
+            >
+              {submitting ? "Submitting…" : "Submit Enquiry"}
             </Button>
-            <p className="tech-label text-center text-muted-foreground/60">
-              Demo form — not wired to a backend yet
+
+            {/* Reserve room so success/error text doesn't cause a layout jump. */}
+            <p
+              role="status"
+              aria-live="polite"
+              className="tech-label min-h-[1.25rem] text-center"
+            >
+              {state.kind === "ok" && (
+                <span className="text-primary">
+                  Thank you — we&apos;ll be in touch shortly.
+                </span>
+              )}
+              {state.kind === "error" && (
+                <span className="text-destructive">{state.message}</span>
+              )}
+              {state.kind === "idle" && (
+                <span className="text-muted-foreground/60">
+                  We respond within one business day.
+                </span>
+              )}
             </p>
           </form>
         </Reveal>

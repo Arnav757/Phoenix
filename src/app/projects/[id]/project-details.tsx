@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "motion/react";
 import type { projects } from "@/lib/content";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ export function ProjectDetails({
 
       <motion.div variants={item} className="mt-10 flex items-center gap-4">
         <Button
-          render={<a href="/#contact" />}
+          render={<Link href="/#contact" />}
           nativeButton={false}
           size="lg"
           className="rounded-full px-7"
