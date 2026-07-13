@@ -5,7 +5,7 @@ import Image from "next/image";
 import gsap from "gsap";
 import { useReducedMotion } from "motion/react";
 import { DraftingMarks } from "./drafting-marks";
-import { ArchitecturalPhoenix } from "./intro-scenes/architectural-phoenix";
+import { HeroVideo } from "./intro-scenes/hero-video";
 
 // Cinematic homepage entry — an architectural presentation unveiling itself,
 // not a loading screen. A fixed overlay above the site, never part of the
@@ -170,7 +170,9 @@ export function IntroExperience({
 
       // As the bird takes over, the drafting overlay recedes to a faint
       // frame so the two scenes read as one continuous drawing.
-      windup.to(draftRef.current, { opacity: 0.35, duration: 0.6, ease: "power2.inOut" }, WINDUP_MS / 1000);
+      // Drafting marks fade fully as the video takes over — the video's
+      // own blueprint-style opening would double up visually otherwise.
+      windup.to(draftRef.current, { opacity: 0, duration: 0.7, ease: "power2.inOut" }, WINDUP_MS / 1000 - 0.2);
     };
     startRef.current = beginPlayback;
 
@@ -233,17 +235,18 @@ export function IntroExperience({
         />
       </div>
 
-      {/* Scenes 02-05 — the swappable animation slot. This is where a
-          Lottie / transparent WebM / Three.js scene would drop in later
-          with no other changes. */}
+      {/* Scenes 02-05 — the swappable animation slot. Currently a stitched
+          three-shot cinematic (hero-opening.mp4). Any component that
+          implements IntroSceneProps ({active, onComplete}) drops in here
+          without touching intro/nav/state code. */}
       <div
         ref={birdWrapRef}
-        className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        className="pointer-events-none absolute inset-0"
       >
-        <ArchitecturalPhoenix
+        <HeroVideo
           active={sceneActive}
           onComplete={handleSceneComplete}
-          className="h-[70vmin] w-[70vmin] max-h-[620px] max-w-[620px]"
+          className="h-full w-full object-cover"
         />
       </div>
 

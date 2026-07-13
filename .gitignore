@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# source video clips (kept locally, output stitched into public/phoenix/videos/)
+/hero video opening/
