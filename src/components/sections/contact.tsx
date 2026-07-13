@@ -59,10 +59,26 @@ export function Contact() {
   const submitting = state.kind === "submitting";
 
   return (
-    <section id="contact" className="mx-auto max-w-7xl px-6 py-28 md:py-36">
-      <SectionHeading kicker="07 — Contact" title="Let's connect" />
-      <div className="grid gap-14 lg:grid-cols-2">
-        <div>
+    <section
+      id="contact"
+      className="relative mx-auto w-[92vw] max-w-[1720px] py-28 md:py-40"
+    >
+      <SectionHeading
+        kicker="07 — Contact"
+        title="Let's connect"
+        sheet="Sheet 07/07"
+      />
+
+      {/* Single drafting annotation in the right margin — decorative only. */}
+      <span
+        className="tech-label pointer-events-none absolute right-0 top-44 hidden origin-right rotate-90 text-muted-foreground/25 md:block"
+        aria-hidden
+      >
+        Issue for construction — 07/07
+      </span>
+
+      <div className="grid gap-14 lg:grid-cols-12">
+        <div className="lg:col-span-5">
           <Reveal>
             <p className="max-w-md text-lg text-muted-foreground">
               Tell us about your requirement — enterprise campus, investment or
@@ -70,20 +86,21 @@ export function Contact() {
             </p>
           </Reveal>
           <Reveal delay={0.1}>
-            <dl className="mt-10 space-y-6">
-              <div>
+            {/* Drafting specification list — ruled ledger rows, no boxes. */}
+            <dl className="mt-12 border-b border-border">
+              <div className="border-t border-border py-5">
                 <dt className="tech-label text-primary">Visit</dt>
                 <dd className="mt-2 max-w-sm text-lg font-medium text-foreground">
                   {company.address}
                 </dd>
               </div>
-              <div>
+              <div className="border-t border-border py-5">
                 <dt className="tech-label text-primary">Phone</dt>
                 <dd className="mt-2 text-xl font-medium text-foreground">
                   {company.phone}
                 </dd>
               </div>
-              <div>
+              <div className="border-t border-border py-5">
                 <dt className="tech-label text-primary">Email</dt>
                 <dd className="mt-2 text-xl font-medium text-foreground">
                   <a
@@ -94,7 +111,7 @@ export function Contact() {
                   </a>
                 </dd>
               </div>
-              <div>
+              <div className="border-t border-border py-5">
                 <dt className="tech-label text-primary">Follow</dt>
                 <dd className="mt-2 flex gap-5 text-sm text-muted-foreground">
                   <a
@@ -119,9 +136,9 @@ export function Contact() {
           </Reveal>
         </div>
 
-        <Reveal delay={0.15}>
+        <Reveal delay={0.15} className="lg:col-span-7">
           <form
-            className="sheet-corners space-y-5 rounded-lg border border-border bg-card p-8 md:p-10"
+            className="sheet-corners space-y-5 rounded-lg border border-border bg-card p-8 md:p-12"
             onSubmit={handleSubmit}
             noValidate
           >
@@ -213,7 +230,7 @@ export function Contact() {
           <p>
             © {new Date().getFullYear()} {company.fullName}. All rights reserved.
           </p>
-          <p className="tech-label">Sheet 01 of 01 · Rev A · Testing model</p>
+          <p className="tech-label">Drawing set 01—07 · Rev A</p>
         </div>
       </footer>
     </section>

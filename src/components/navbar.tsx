@@ -35,7 +35,7 @@ export function Navbar({
       } ${
         scrolled
           ? "bg-background/70 backdrop-blur-md border-b border-border/60"
-          : "bg-background/25 backdrop-blur-sm border-b border-transparent"
+          : "bg-background/10 backdrop-blur-[2px] border-b border-transparent"
       }`}
       aria-hidden={!visible}
     >

@@ -38,7 +38,7 @@ export function About() {
             className="tech-label hidden text-muted-foreground/40 md:inline"
             aria-hidden
           >
-            N — 01 · Sheet 01/06
+            N — 01 · Sheet 01/07
           </span>
         </div>
       </Reveal>

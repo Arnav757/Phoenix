@@ -61,35 +61,57 @@ export const staggerItem = {
   },
 };
 
+// Board-style section heading: kicker + drafting rule on the left, an
+// optional sheet annotation on the right, and a display-scale title. Every
+// homepage section shares this language so the page reads as a numbered
+// set of presentation boards rather than a stack of widgets.
 export function SectionHeading({
   kicker,
   title,
+  sheet,
   id,
 }: {
   kicker: string;
   title: string;
+  /** drafting-style sheet reference, e.g. "Sheet 02/07" — decorative */
+  sheet?: string;
   id?: string;
 }) {
   return (
-    <div className="mb-12 md:mb-16">
+    <div className="mb-16 md:mb-24">
       <Reveal>
-        <div className="flex items-center gap-4">
-          <span className="tech-label text-primary">{kicker}</span>
-          <motion.span
-            className="h-px bg-primary/40 origin-left"
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
-            style={{ width: 96 }}
-            aria-hidden
-          />
+        <div className="flex items-baseline justify-between">
+          <div className="flex items-center gap-4">
+            <span className="tech-label text-primary">{kicker}</span>
+            <motion.span
+              className="h-px bg-primary/40 origin-left"
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.9, ease: "easeOut", delay: 0.15 }}
+              style={{ width: 96 }}
+              aria-hidden
+            />
+          </div>
+          {sheet ? (
+            <span
+              className="tech-label hidden text-muted-foreground/40 md:inline"
+              aria-hidden
+            >
+              {sheet}
+            </span>
+          ) : null}
         </div>
       </Reveal>
       <Reveal delay={0.08}>
         <h2
           id={id}
-          className="mt-4 text-3xl md:text-5xl font-semibold tracking-tight text-foreground"
+          className="mt-6 font-semibold tracking-tight text-foreground"
+          style={{
+            fontSize: "clamp(2.5rem, 5.5vw, 5rem)",
+            lineHeight: 1.02,
+            textWrap: "balance",
+          }}
         >
           {title}
         </h2>

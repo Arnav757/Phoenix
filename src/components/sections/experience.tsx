@@ -1,133 +1,98 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  motion,
-  useInView,
-  useMotionValue,
-  useReducedMotion,
-  useSpring,
-} from "motion/react";
+import { motion } from "motion/react";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
 import { certifications, foundation, stats } from "@/lib/content";
 
-// Stats grow like survey measurements: number counts up while a scale bar
-// extends beneath it.
-function Stat({
-  value,
-  suffix,
-  label,
-  format,
-  delay,
-}: {
-  value: number;
-  suffix?: string;
-  label: string;
-  format?: "year";
-  delay: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
-  const reduce = useReducedMotion();
-  const mv = useMotionValue(format === "year" ? 1960 : 0);
-  const spring = useSpring(mv, { duration: 1.8, bounce: 0 });
-  const [display, setDisplay] = useState(format === "year" ? "1960" : "0");
-
-  useEffect(() => {
-    if (inView) mv.set(value);
-  }, [inView, mv, value]);
-
-  useEffect(() => {
-    if (reduce) {
-      setDisplay(String(value));
-      return;
-    }
-    return spring.on("change", (v) => setDisplay(String(Math.round(v))));
-  }, [spring, reduce, value]);
-
-  return (
-    <div ref={ref} className="relative p-8">
-      <p className="text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
-        {display}
-        {suffix && <span className="text-primary">{suffix}</span>}
-      </p>
-      {/* survey scale bar */}
-      <motion.div
-        initial={reduce ? false : { scaleX: 0 }}
-        whileInView={{ scaleX: 1 }}
-        viewport={{ once: true, margin: "-80px" }}
-        transition={{ duration: 1.6, delay, ease: [0.22, 1, 0.36, 1] }}
-        className="mt-4 flex h-2 origin-left items-end gap-[3px]"
-        aria-hidden
-      >
-        {Array.from({ length: 24 }).map((_, i) => (
-          <span
-            key={i}
-            className={`w-px bg-primary/70 ${i % 6 === 0 ? "h-2" : "h-1"}`}
-          />
-        ))}
-      </motion.div>
-      <p className="mt-4 text-sm text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
+// Sheet 05 — Experience. About already carries the four figures as a large
+// factsheet band, so here they appear once more only as a slim credibility
+// ribbon (static, understated), followed by a two-board composition:
+// certifications as a ruled specification list, and the Phoenix Foundation
+// initiatives as a two-column schedule. No card boxes, no counters —
+// hairline rules and type do the work.
 export function Experience() {
   return (
-    <section id="experience" className="mx-auto max-w-7xl px-6 py-28 md:py-36">
-      <SectionHeading kicker="05 — Experience" title="Built on a track record" />
+    <section
+      id="experience"
+      className="relative mx-auto w-[92vw] max-w-[1720px] py-28 md:py-40"
+    >
+      <SectionHeading
+        kicker="05 — Experience"
+        title="Built on a track record"
+        sheet="Sheet 05/07"
+      />
 
-      <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s, i) => (
-          <div key={s.label} className="bg-card">
-            <Stat {...s} delay={i * 0.12} />
-          </div>
-        ))}
-      </div>
+      {/* Credibility ribbon — the four figures inline on one ruled strip. */}
+      <Reveal>
+        <div className="border-y border-border py-6 md:py-8">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4 md:gap-x-10">
+            {stats.map((s) => (
+              <div key={s.label} className="flex flex-col">
+                <dt className="tech-label order-2 mt-2 text-muted-foreground">
+                  {s.label}
+                </dt>
+                <dd className="order-1 flex items-baseline gap-1">
+                  <span className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+                    {s.value}
+                  </span>
+                  {"suffix" in s && s.suffix ? (
+                    <span className="text-base font-medium text-primary">
+                      {s.suffix}
+                    </span>
+                  ) : null}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </Reveal>
 
-      {/* certifications */}
-      <div className="mt-20 grid gap-12 lg:grid-cols-2">
-        <div>
+      {/* Two-board composition — certifications spec list + foundation schedule. */}
+      <div className="mt-20 grid gap-14 md:mt-28 lg:grid-cols-12">
+        {/* Board A — certifications as a ruled specification list. */}
+        <div className="lg:col-span-5">
           <Reveal>
-            <h3 className="text-2xl font-semibold text-foreground">
+            <h3 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               Certified green, from the first drawing
             </h3>
           </Reveal>
-          <Stagger className="mt-8 space-y-4">
+          <Stagger className="mt-8 md:mt-10">
             {certifications.map((c) => (
               <motion.div
                 key={c.name}
                 variants={staggerItem}
-                className="flex items-center gap-4 rounded-md border border-border bg-card p-5"
+                className="flex items-start gap-4 border-t border-border py-5 last:border-b"
               >
                 <span
-                  className="block h-2.5 w-2.5 rotate-45 border border-primary bg-primary/30"
+                  className="mt-1.5 block h-2 w-2 shrink-0 rotate-45 border border-primary bg-primary/30"
                   aria-hidden
                 />
                 <div>
                   <p className="font-medium text-foreground">{c.name}</p>
-                  <p className="text-sm text-muted-foreground">{c.body}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{c.body}</p>
                 </div>
               </motion.div>
             ))}
           </Stagger>
         </div>
 
-        {/* foundation */}
-        <div>
+        {/* Board B — Phoenix Foundation as a two-column schedule. */}
+        <div className="lg:col-span-7">
           <Reveal>
-            <h3 className="text-2xl font-semibold text-foreground">
+            <h3 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               Phoenix Foundation
             </h3>
-            <p className="mt-4 text-muted-foreground">{foundation.intro}</p>
+            <p className="mt-4 max-w-lg text-muted-foreground">
+              {foundation.intro}
+            </p>
           </Reveal>
-          <Stagger className="mt-8 grid grid-cols-2 gap-4">
+          <Stagger className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 md:mt-10">
             {foundation.initiatives.map((f) => (
               <motion.div
                 key={f.title}
                 variants={staggerItem}
-                className="rounded-md border border-border bg-card p-5"
+                className="border-t border-border pt-6"
               >
                 <Image
                   src={f.icon}
@@ -136,12 +101,25 @@ export function Experience() {
                   height={40}
                   className="h-10 w-10"
                 />
-                <p className="mt-3 font-medium text-foreground">{f.title}</p>
-                <p className="text-sm text-muted-foreground">{f.detail}</p>
+                <p className="mt-4 font-medium text-foreground">{f.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{f.detail}</p>
               </motion.div>
             ))}
           </Stagger>
         </div>
+      </div>
+
+      {/* Sparse drafting annotations in the surrounding whitespace. */}
+      <div
+        className="pointer-events-none absolute inset-0 hidden text-muted-foreground/25 md:block"
+        aria-hidden
+      >
+        <span className="tech-label absolute right-0 top-1/2 origin-right rotate-90">
+          IGBC · CII
+        </span>
+        <span className="tech-label absolute bottom-10 left-0">
+          Drawing · EXP / 05 · Rev 01
+        </span>
       </div>
     </section>
   );
