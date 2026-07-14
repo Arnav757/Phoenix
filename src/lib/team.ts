@@ -41,4 +41,8 @@ export const DIRECTORS: TeamMember[] = [
   { id: "director-2", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
   { id: "director-3", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
   { id: "director-4", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+  { id: "director-5", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+  { id: "director-6", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+  { id: "director-7", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+  { id: "director-8", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
 ];

@@ -4,7 +4,13 @@ import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
 import { motion } from "motion/react";
 import { DIRECTORS, TEAM_MEMBERS, teamIntro } from "@/lib/team";
-import { CoverflowCarousel } from "./coverflow-carousel";
+import { CircularGallery, type GalleryItem } from "@/components/ui/circular-gallery";
+
+const directorGalleryItems: GalleryItem[] = DIRECTORS.map((member) => ({
+  common: member.name,
+  binomial: member.role,
+  photo: { url: member.photo, text: member.name },
+}));
 
 // OUR TEAM — same architectural-blueprint presentation board as the rest of
 // the site (bp-grid backdrop, tech-label annotations, sheet-corners cards).
@@ -68,9 +74,9 @@ export function TeamPageClient() {
             <Reveal>
               <p className="tech-label text-primary">Board of directors</p>
             </Reveal>
-            <Reveal delay={0.1} className="mt-8">
-              <CoverflowCarousel members={DIRECTORS} />
-            </Reveal>
+            <div className="mt-8 h-[65vh] min-h-[420px] overflow-hidden">
+              <CircularGallery items={directorGalleryItems} radius={420} />
+            </div>
           </div>
         )}
 
