@@ -136,6 +136,8 @@ const CircularGallery = React.forwardRef<HTMLDivElement, CircularGalleryProps>(
                   marginLeft: "-120px",
                   marginTop: "-160px",
                   transition: "opacity 0.3s linear",
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
                 }}
               >
                 <div className="relative w-full h-full rounded-lg shadow-2xl overflow-hidden border border-border bg-card/70 backdrop-blur-lg">
