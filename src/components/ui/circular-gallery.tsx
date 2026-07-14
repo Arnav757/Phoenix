@@ -37,7 +37,7 @@ interface CircularGalleryProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const CircularGallery = React.forwardRef<HTMLDivElement, CircularGalleryProps>(
-  ({ items, className, radius = 600, autoRotateSpeed = 45, ...props }, ref) => {
+  ({ items, className, radius = 600, autoRotateSpeed = 28, ...props }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<HTMLDivElement>(null);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
