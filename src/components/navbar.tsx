@@ -77,6 +77,7 @@ export function Navbar({
           {[
             ...sections.slice(1, 6).map((s) => ({ href: `/#${s.id}`, label: s.label })),
             { href: "/partners", label: "Partners" },
+            { href: "/team", label: "Team" },
           ].map((link) => (
             <Link
               key={link.href}
