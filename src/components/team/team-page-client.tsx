@@ -3,7 +3,8 @@
 import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
 import { motion } from "motion/react";
-import { TEAM_MEMBERS, teamIntro } from "@/lib/team";
+import { DIRECTORS, TEAM_MEMBERS, teamIntro } from "@/lib/team";
+import { CoverflowCarousel } from "./coverflow-carousel";
 
 // OUR TEAM — same architectural-blueprint presentation board as the rest of
 // the site (bp-grid backdrop, tech-label annotations, sheet-corners cards).
@@ -61,6 +62,17 @@ export function TeamPageClient() {
             ))}
           </Stagger>
         </div>
+
+        {DIRECTORS.length > 0 && (
+          <div className="mx-auto mt-24 w-[92vw] max-w-[1720px]">
+            <Reveal>
+              <p className="tech-label text-primary">Board of directors</p>
+            </Reveal>
+            <Reveal delay={0.1} className="mt-8">
+              <CoverflowCarousel members={DIRECTORS} />
+            </Reveal>
+          </div>
+        )}
 
         <footer className="mx-auto mt-24 w-[92vw] max-w-[1720px] border-t border-border pt-8 text-center">
           <p className="tech-label text-muted-foreground/70">

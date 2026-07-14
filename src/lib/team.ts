@@ -31,3 +31,14 @@ export const TEAM_MEMBERS: TeamMember[] = [
     bio: "From offering solutions to keeping up the motivation of people around, Mr. Gopi Krishna Patibanda is a man of vision. He builds and upholds the trust between the company and its clients, investors and associates. He believes in bringing together the new ideas of the younger members of the company with the wisdom and experience of the older employees. As Chairman and Managing Director, Mr. Patibanda has undertaken the mission of taking the Phoenix Group to greater success and growth.",
   },
 ];
+
+// [PLACEHOLDER] — Board of Directors roster pending client confirmation.
+// Shown in the coverflow carousel below Executive Leadership. Add real
+// entries here as they're confirmed; `photo` is optional — cards without one
+// render a brand-gradient placeholder instead.
+export const DIRECTORS: TeamMember[] = [
+  { id: "director-1", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+  { id: "director-2", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+  { id: "director-3", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+  { id: "director-4", name: "[PLACEHOLDER NAME]", role: "Director", bio: "" },
+];
