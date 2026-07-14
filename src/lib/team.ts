@@ -1,6 +1,7 @@
 // Phoenix Group — Our Team page content.
 // Source: phoenixindia.net (scraped 2026-07-14). Executive Leadership is the
-// only roster on the current site — no photos exist there, text-only bios.
+// only roster on the current site. Photos downloaded from
+// phoenixindia.net/images/Team/{suresh,gopikrishna}.jpg.
 
 export const teamIntro = {
   kicker: "05 — Leadership",
@@ -23,12 +24,14 @@ export const TEAM_MEMBERS: TeamMember[] = [
     name: "Suresh Chukkapalli",
     role: "Chairman Emeritus",
     bio: "The Founder and Chairman of the Phoenix Group, a technocrat and a visionary who took a bold leap from being an automobile entrepreneur to independently handling industries like steel, power, cement and real estate. His passion for the big enterprise can be gauged by the progress of Phoenix over the years. Mr. Suresh envisions an even brighter future for Phoenix with his in-depth experience and exposure leading the enterprise to greater heights. He is the source of inspiration and the driving force behind Phoenix.",
+    photo: "/phoenix/team/suresh-chukkapalli.jpg",
   },
   {
     id: "gopi-krishna-patibanda",
     name: "Gopi Krishna Patibanda",
     role: "Chairman & Managing Director",
     bio: "From offering solutions to keeping up the motivation of people around, Mr. Gopi Krishna Patibanda is a man of vision. He builds and upholds the trust between the company and its clients, investors and associates. He believes in bringing together the new ideas of the younger members of the company with the wisdom and experience of the older employees. As Chairman and Managing Director, Mr. Patibanda has undertaken the mission of taking the Phoenix Group to greater success and growth.",
+    photo: "/phoenix/team/gopi-krishna-patibanda.jpg",
   },
 ];
 

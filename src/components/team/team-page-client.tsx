@@ -5,6 +5,7 @@ import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/revea
 import { motion } from "motion/react";
 import { DIRECTORS, TEAM_MEMBERS, teamIntro } from "@/lib/team";
 import { CircularGallery, type GalleryItem } from "@/components/ui/circular-gallery";
+import { LeadershipCard } from "./leadership-card";
 
 const directorGalleryItems: GalleryItem[] = DIRECTORS.map((member) => ({
   common: member.name,
@@ -14,9 +15,9 @@ const directorGalleryItems: GalleryItem[] = DIRECTORS.map((member) => ({
 
 // OUR TEAM — same architectural-blueprint presentation board as the rest of
 // the site (bp-grid backdrop, tech-label annotations, sheet-corners cards).
-// Roster + bios sourced from phoenixindia.net — see src/lib/team.ts. No
-// headshots exist on the current site, so each card shows a placeholder
-// portrait slot until photos are supplied.
+// Roster + bios + photos sourced from phoenixindia.net — see src/lib/team.ts.
+// Board of Directors roster (DIRECTORS) has no photos yet — those cards show
+// a placeholder portrait slot until supplied.
 export function TeamPageClient() {
   return (
     <>
@@ -42,31 +43,22 @@ export function TeamPageClient() {
             <p className="tech-label text-primary">Executive leadership</p>
           </Reveal>
 
-          <Stagger className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {TEAM_MEMBERS.map((member) => (
-              <motion.div
-                key={member.id}
-                variants={staggerItem}
-                className="sheet-corners flex gap-6 rounded-lg border border-border bg-card p-8"
-              >
-                <div
-                  className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border border-dashed border-primary/40 bg-primary/5 text-center text-muted-foreground/60"
-                  aria-hidden
-                >
-                  <span className="tech-label">Photo pending</span>
-                </div>
-                <div>
-                  <p className="text-xl font-semibold text-foreground">
-                    {member.name}
-                  </p>
-                  <p className="tech-label mt-1 text-primary">{member.role}</p>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {member.bio}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </Stagger>
+          {TEAM_MEMBERS.length === 0 ? (
+            <p className="mt-8 rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              Leadership roster pending client confirmation.
+            </p>
+          ) : (
+            <Stagger className="mx-auto mt-6 grid max-w-4xl grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-12">
+              {TEAM_MEMBERS.map((member) => (
+                <motion.div key={member.id} variants={staggerItem}>
+                  <LeadershipCard
+                    member={member}
+                    variant={member.role.toLowerCase().includes("emeritus") ? "emeritus" : "active"}
+                  />
+                </motion.div>
+              ))}
+            </Stagger>
+          )}
         </div>
 
         {DIRECTORS.length > 0 && (
