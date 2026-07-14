@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { UserRound } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import type { TeamMember } from "@/lib/team";
@@ -24,6 +24,7 @@ export function LeadershipCard({
   const spotlightRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const reduceMotion = useReducedMotion();
+  const [expanded, setExpanded] = useState(false);
 
   const gradient =
     variant === "active"
@@ -125,7 +126,19 @@ export function LeadershipCard({
             aria-hidden
           />
 
-          <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground">{member.bio}</p>
+          <p
+            className={`text-sm leading-relaxed text-muted-foreground ${expanded ? "" : "line-clamp-4"}`}
+          >
+            {member.bio}
+          </p>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className={`tech-label mt-2 underline-offset-4 hover:underline ${accentClass}`}
+          >
+            {expanded ? "Show less" : "Read more"}
+          </button>
         </div>
       </div>
     </div>
