@@ -171,10 +171,9 @@ export function AwardsPageClient() {
               <div>
                 <p className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                   {awardsPage.awardsAtlas.total}
-                  <span className="text-primary">+</span>
                 </p>
                 <p className="tech-label mt-2 text-muted-foreground">
-                  Industry awards received
+                  Industry awards on record
                 </p>
               </div>
               <div className="mt-8 sm:mt-0">

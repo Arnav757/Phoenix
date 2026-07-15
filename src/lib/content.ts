@@ -125,14 +125,16 @@ export const awardsPage = {
     body:
       "For twenty years Phoenix has held itself to the standards of an engineering firm — disciplined execution, transparent process, precertified sustainability from day one. What follows is the drawing set: the recognition we've earned, the certifications we hold, and the quality regime that underwrites both.",
   },
-  // Direct image URLs from the source site. Public assets served over HTTPS;
-  // the site's CSP already permits img-src https:. Referenced as-is so we
-  // never re-caption an award we can't attribute textually.
+  // Award images: 64 assets sourced from phoenixindia.net and self-hosted
+  // under /public so they load fast, get Vercel's CDN, and don't break if
+  // the source site rotates its media. The source page holds the specific
+  // award titles/years only inside image content itself — presented here
+  // as an atlas rather than re-captioned to avoid inventing attribution.
   awardsAtlas: {
-    total: 40,
-    urls: Array.from({ length: 24 }, (_, i) => `https://phoenixindia.net/images/awards/_${i + 1}.webp`),
+    total: 64,
+    urls: Array.from({ length: 64 }, (_, i) => `/phoenix/images/awards/_${i + 1}.webp`),
     caption:
-      "40+ industry awards received by Phoenix Group over two decades. Detailed award-by-award attribution is being consolidated.",
+      "64 industry awards received by Phoenix Group over two decades. Detailed award-by-award attribution is being consolidated.",
   },
   quality: {
     heading: "Quality & compliance",
