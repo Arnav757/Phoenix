@@ -15,7 +15,10 @@ export type TeamMember = {
   name: string;
   role: string;
   bio: string;
+  /** Studio photo, rectangular. Used as a fallback if no cutout exists. */
   photo?: string;
+  /** Background-removed portrait (transparent PNG) for the editorial carousel. */
+  photoCutout?: string;
   quote?: string;
 };
 
@@ -26,6 +29,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
     role: "Chairman Emeritus",
     bio: "The Founder and Chairman of the Phoenix Group, a technocrat and a visionary who took a bold leap from being an automobile entrepreneur to independently handling industries like steel, power, cement and real estate. His passion for the big enterprise can be gauged by the progress of Phoenix over the years. Mr. Suresh envisions an even brighter future for Phoenix with his in-depth experience and exposure leading the enterprise to greater heights. He is the source of inspiration and the driving force behind Phoenix.",
     photo: "/phoenix/team/suresh-chukkapalli.jpg",
+    photoCutout: "/phoenix/team/suresh-chukkapalli-cutout.png",
   },
   {
     id: "gopi-krishna-patibanda",
@@ -33,6 +37,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
     role: "Chairman & Managing Director",
     bio: "From offering solutions to keeping up the motivation of people around, Mr. Gopi Krishna Patibanda is a man of vision. He builds and upholds the trust between the company and its clients, investors and associates. He believes in bringing together the new ideas of the younger members of the company with the wisdom and experience of the older employees. As Chairman and Managing Director, Mr. Patibanda has undertaken the mission of taking the Phoenix Group to greater success and growth.",
     photo: "/phoenix/team/gopi-krishna-patibanda.jpg",
+    photoCutout: "/phoenix/team/gopi-krishna-patibanda-cutout.png",
   },
 ];
 

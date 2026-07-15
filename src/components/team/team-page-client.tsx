@@ -1,17 +1,17 @@
 "use client";
 
 import { Navbar } from "@/components/navbar";
-import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
-import { motion } from "motion/react";
+import { Reveal, SectionHeading } from "@/components/reveal";
 import { DIRECTORS, TEAM_MEMBERS, teamIntro } from "@/lib/team";
-import { LeadershipCard } from "./leadership-card";
-import { LeadershipShowcase } from "./leadership-showcase";
+import { PortraitCarousel } from "./portrait-carousel";
 
-// OUR TEAM — same architectural-blueprint presentation board as the rest of
-// the site (bp-grid backdrop, tech-label annotations, sheet-corners cards).
-// Roster + bios + photos sourced from phoenixindia.net — see src/lib/team.ts.
-// Board of Directors roster (DIRECTORS) has no photos yet — those cards show
-// a placeholder portrait slot until supplied.
+const LEADERSHIP = [...TEAM_MEMBERS, ...DIRECTORS];
+
+// OUR TEAM — editorial full-bleed portrait carousel (see portrait-carousel.tsx).
+// Executive Leadership + Board of Directors are one continuous roster here;
+// bios/photos for the two executives come from phoenixindia.net (background
+// removed for the cut-out presentation — see src/lib/team.ts), directors are
+// placeholders pending client confirmation.
 export function TeamPageClient() {
   return (
     <>
@@ -32,37 +32,13 @@ export function TeamPageClient() {
           </Reveal>
         </header>
 
-        <div className="mx-auto mt-16 w-[92vw] max-w-[1720px]">
-          <Reveal>
-            <p className="tech-label text-primary">Executive leadership</p>
-          </Reveal>
-
-          {TEAM_MEMBERS.length === 0 ? (
-            <p className="mt-8 rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Leadership roster pending client confirmation.
-            </p>
-          ) : (
-            <Stagger className="mx-auto mt-6 grid max-w-4xl grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-12">
-              {TEAM_MEMBERS.map((member) => (
-                <motion.div key={member.id} variants={staggerItem}>
-                  <LeadershipCard
-                    member={member}
-                    variant={member.role.toLowerCase().includes("emeritus") ? "emeritus" : "active"}
-                  />
-                </motion.div>
-              ))}
-            </Stagger>
-          )}
-        </div>
-
-        {DIRECTORS.length > 0 && (
-          <div className="mx-auto mt-24 w-[92vw] max-w-[1720px]">
-            <Reveal>
-              <p className="tech-label text-center text-primary">Board of directors</p>
-            </Reveal>
-            <div className="mt-10">
-              <LeadershipShowcase members={DIRECTORS} />
-            </div>
+        {LEADERSHIP.length === 0 ? (
+          <p className="mx-auto mt-16 w-[92vw] max-w-[1720px] rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            Leadership roster pending client confirmation.
+          </p>
+        ) : (
+          <div className="mt-16">
+            <PortraitCarousel members={LEADERSHIP} />
           </div>
         )}
 
