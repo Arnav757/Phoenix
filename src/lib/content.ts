@@ -109,6 +109,64 @@ export const certifications = [
   { name: "CII Partnership", body: "Confederation of Indian Industry" },
 ];
 
+// Awards & Certifications page — abstract facts we can attribute to
+// phoenixindia.net verbatim. Detailed award titles/years are held in the
+// source page as images without textual metadata; the atlas below points
+// at those images directly rather than inventing captions.
+export const awardsPage = {
+  hero: {
+    kicker: "Sheet 08 — Recognition",
+    title: "Awards & certifications",
+    lede:
+      "Two decades of steady delivery in Hyderabad, precertified green from the first drawing, and recognised across the industry.",
+  },
+  introduction: {
+    heading: "A record of trust",
+    body:
+      "For twenty years Phoenix has held itself to the standards of an engineering firm — disciplined execution, transparent process, precertified sustainability from day one. What follows is the drawing set: the recognition we've earned, the certifications we hold, and the quality regime that underwrites both.",
+  },
+  // Direct image URLs from the source site. Public assets served over HTTPS;
+  // the site's CSP already permits img-src https:. Referenced as-is so we
+  // never re-caption an award we can't attribute textually.
+  awardsAtlas: {
+    total: 40,
+    urls: Array.from({ length: 24 }, (_, i) => `https://phoenixindia.net/images/awards/_${i + 1}.webp`),
+    caption:
+      "40+ industry awards received by Phoenix Group over two decades. Detailed award-by-award attribution is being consolidated.",
+  },
+  quality: {
+    heading: "Quality & compliance",
+    body:
+      "Every project runs the same disciplined sequence from feasibility to handover — precertified green, independently audited, and delivered against a public schedule.",
+    pillars: [
+      {
+        num: "Q1",
+        title: "Engineering standards",
+        body:
+          "Structural, MEP and envelope engineering benchmarked against international codes; peer-reviewed at every phase.",
+      },
+      {
+        num: "Q2",
+        title: "Construction quality",
+        body:
+          "Material testing, third-party inspection and progress reporting at every milestone; nothing is signed off without evidence.",
+      },
+      {
+        num: "Q3",
+        title: "Green compliance",
+        body:
+          "IGBC precertification from concept, holding sustainability constraints inside the design brief — not bolted on at the end.",
+      },
+      {
+        num: "Q4",
+        title: "Professional excellence",
+        body:
+          "CII partnership and long-standing collaboration with global engineering, design and MEP consultants.",
+      },
+    ],
+  },
+};
+
 export const foundation = {
   intro:
     "Phoenix Foundation has been lauded for its thoughtful and inventive approach to philanthropy and social causes. Phoenix wants to leave a lasting impact not only on the environment but on the society we are an integral part of.",
