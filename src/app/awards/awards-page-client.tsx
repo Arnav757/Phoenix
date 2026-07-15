@@ -194,13 +194,45 @@ export function AwardsPageClient() {
               </div>
             </div>
 
-            {/* 3D carousel — award atlas. */}
+            {/* 3D carousel — award atlas. The 3D ring reads best with ~20
+                faces at the current cylinder width; the full 64-image set
+                lives below as a static grid so nothing is hidden. */}
             <Reveal delay={0.05}>
               <ThreeDPhotoCarousel
-                images={awardsPage.awardsAtlas.urls}
+                images={awardsPage.awardsAtlas.urls.slice(0, 20)}
                 caption={awardsPage.awardsAtlas.caption}
               />
             </Reveal>
+
+            {/* Full atlas — every award image, so the record itself is
+                visible rather than only the ring subset. Restrained
+                spec-sheet grid, no boxes, hairline separators via gap. */}
+            <div className="mt-24 border-t border-border pt-10">
+              <div className="mb-8 flex items-baseline justify-between">
+                <span className="tech-label text-primary">
+                  A.01 — Full atlas
+                </span>
+                <span
+                  className="tech-label hidden text-muted-foreground/50 md:inline"
+                  aria-hidden
+                >
+                  {awardsPage.awardsAtlas.total} plates · Scale 1:1
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                {awardsPage.awardsAtlas.urls.map((src) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={src}
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-square w-full rounded-sm border border-border bg-card object-cover transition-colors duration-300 hover:border-primary/60"
+                    aria-hidden
+                  />
+                ))}
+              </div>
+            </div>
 
             <p className="tech-label mt-10 text-muted-foreground/60">
               Award atlas — detailed title/year attribution pending client consolidation
