@@ -436,18 +436,21 @@ function CertificationRow({
 
 // ─────────────────────────────────────────────────────────────────────
 // Page-level supporting data — derived, not fabricated.
+// CircularGallery is shared with the Team page; its schema uses
+// `common` (primary heading) + `binomial` (subtext) + optional photo.
+// For certifications we skip photo → the component falls back to a
+// brand-gradient tile, which is what we want architecturally.
 // ─────────────────────────────────────────────────────────────────────
-const certGalleryItems: GalleryItem[] = certifications.map((c) => ({
-  kicker:
-    c.body.includes("Green") ? "IGBC" :
-    c.body.includes("Industry") ? "CII" : "Cert",
-  title: c.name,
-  authority: c.body,
-  meta: "Rev A · Held current",
-}));
-
 const kickerFor = (body: string) =>
   body.includes("Green") ? "IGBC" : body.includes("Industry") ? "CII" : "Cert";
+
+const certGalleryItems: GalleryItem[] = certifications.map((c) => ({
+  common: c.name,
+  binomial: c.body,
+  photo: {
+    text: `${kickerFor(c.body)} certification plate`,
+  },
+}));
 
 // ─────────────────────────────────────────────────────────────────────
 // Page

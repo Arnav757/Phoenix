@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { PageTransitionProvider } from "@/components/page-transition";
+import { SmoothScrollProvider } from "@/components/smooth-scroll";
+import "lenis/dist/lenis.css";
 import "./globals.css";
 
 // Brand typeface is Untitled Sans (Klim, licensed). Inter is the web
@@ -33,7 +35,9 @@ export default function RootLayout({
       className={`${interSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="phoenix min-h-full flex flex-col">
-        <PageTransitionProvider>{children}</PageTransitionProvider>
+        <SmoothScrollProvider>
+          <PageTransitionProvider>{children}</PageTransitionProvider>
+        </SmoothScrollProvider>
       </body>
     </html>
   );

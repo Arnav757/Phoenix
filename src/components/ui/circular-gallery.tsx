@@ -1,182 +1,172 @@
 "use client";
 
-import React, { useEffect, useRef, useState, type HTMLAttributes } from "react";
+import React, { useEffect, useRef, HTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
-// Adapted circular gallery — turned from a scroll-hijack ring into a slow
-// architectural turntable so it doesn't fight the site's normal scroll.
-// The original hijacked window scroll on a 500vh container; here it just
-// auto-rotates when in view and respects prefers-reduced-motion by pausing.
-
-const cn = (...classes: (string | undefined | null | false)[]) =>
-  classes.filter(Boolean).join(" ");
-
+// Define the type for a single gallery item. `photo.url` is optional —
+// items without one render a brand-gradient placeholder instead of a
+// broken image (used for real people whose photo hasn't been supplied yet).
 export interface GalleryItem {
-  /** Small mono kicker, e.g. "IGBC" */
-  kicker?: string;
-  /** Certification / award name — becomes the tile heading */
-  title: string;
-  /** Issuing authority / awarding body */
-  authority: string;
-  /** Optional validity or year note */
-  meta?: string;
-  /** Optional image URL — if omitted, the tile renders as a drafting card */
-  image?: string;
+  common: string;
+  binomial: string;
+  photo: {
+    url?: string;
+    text: string;
+    pos?: string;
+    by?: string;
+  };
 }
+
+// Brand-palette gradients — reused as the placeholder tile when an item has
+// no photo (Phoenix secondary colors, same set used elsewhere on the site).
+const GRADIENTS = [
+  "linear-gradient(160deg, var(--primary), var(--brand-sky))",
+  "linear-gradient(160deg, var(--brand-sky), var(--brand-cream))",
+  "linear-gradient(160deg, var(--brand-yellow), var(--brand-cream))",
+  "linear-gradient(160deg, var(--brand-green), var(--brand-sky))",
+  "linear-gradient(160deg, var(--brand-purple), var(--primary))",
+  "linear-gradient(160deg, var(--eng-red), var(--brand-yellow))",
+];
 
 interface CircularGalleryProps extends HTMLAttributes<HTMLDivElement> {
   items: GalleryItem[];
-  /** Ring radius in px. Auto-shrinks on narrow viewports. */
+  /** Controls how far the items are from the center. */
   radius?: number;
-  /** Auto-rotate degrees per frame. 0 disables. */
+  /** Degrees per second of continuous auto-rotation. */
   autoRotateSpeed?: number;
 }
 
 const CircularGallery = React.forwardRef<HTMLDivElement, CircularGalleryProps>(
-  function CircularGallery(
-    { items, className, radius = 460, autoRotateSpeed = 0.05, ...props },
-    ref
-  ) {
-    const [rotation, setRotation] = useState(0);
-    const [paused, setPaused] = useState(false);
-    const [effectiveRadius, setEffectiveRadius] = useState(radius);
-    const [prefersReduced, setPrefersReduced] = useState(false);
-    const animationFrameRef = useRef<number | null>(null);
+  ({ items, className, radius = 600, autoRotateSpeed = 28, ...props }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const stageRef = useRef<HTMLDivElement>(null);
+    const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-    // Reduced-motion opt-in and responsive radius.
+    const rotationRef = useRef(0);
+    const rafRef = useRef<number | null>(null);
+    const lastTRef = useRef<number | null>(null);
+    const hoveredRef = useRef(false);
+    const reducedRef = useRef(false);
+
+    // Continuous, time-delta-driven auto-rotation — frame-rate independent
+    // (so speed is consistent regardless of display refresh rate), paused on
+    // hover so a visitor can actually read a card, and skipped entirely
+    // under prefers-reduced-motion, matching every other motion primitive on
+    // this site (see reveal.tsx, page-transition.tsx).
     useEffect(() => {
-      const rm = window.matchMedia("(prefers-reduced-motion: reduce)");
-      const setRM = () => setPrefersReduced(rm.matches);
-      setRM();
-      rm.addEventListener("change", setRM);
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      reducedRef.current = mq.matches;
+      const onChange = (e: MediaQueryListEvent) => (reducedRef.current = e.matches);
+      mq.addEventListener("change", onChange);
 
-      const sizeToViewport = () => {
-        const w = window.innerWidth;
-        if (w < 640) setEffectiveRadius(Math.min(radius, 220));
-        else if (w < 1024) setEffectiveRadius(Math.min(radius, 340));
-        else setEffectiveRadius(radius);
+      const anglePerItem = 360 / items.length;
+
+      const applyTransforms = () => {
+        const rotation = rotationRef.current;
+        if (stageRef.current) {
+          stageRef.current.style.transform = `rotateY(${rotation}deg)`;
+        }
+        cardRefs.current.forEach((el, i) => {
+          if (!el) return;
+          const itemAngle = i * anglePerItem;
+          const relativeAngle = (itemAngle + (rotation % 360) + 360) % 360;
+          const normalizedAngle = Math.abs(relativeAngle > 180 ? 360 - relativeAngle : relativeAngle);
+          const opacity = Math.max(0.3, 1 - normalizedAngle / 180);
+          el.style.opacity = String(opacity);
+        });
       };
-      sizeToViewport();
-      window.addEventListener("resize", sizeToViewport);
+
+      const tick = (t: number) => {
+        const last = lastTRef.current ?? t;
+        const dt = Math.min((t - last) / 1000, 1 / 30);
+        lastTRef.current = t;
+
+        if (!hoveredRef.current && !reducedRef.current) {
+          rotationRef.current += autoRotateSpeed * dt;
+          applyTransforms();
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+
+      applyTransforms();
+      rafRef.current = requestAnimationFrame(tick);
+
       return () => {
-        rm.removeEventListener("change", setRM);
-        window.removeEventListener("resize", sizeToViewport);
+        mq.removeEventListener("change", onChange);
+        if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       };
-    }, [radius]);
+    }, [items.length, autoRotateSpeed]);
 
-    // Pause when the gallery scrolls out of view so we don't burn cycles.
-    useEffect(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      const io = new IntersectionObserver(
-        (entries) => setPaused(!entries[0]?.isIntersecting),
-        { rootMargin: "80px" }
-      );
-      io.observe(el);
-      return () => io.disconnect();
-    }, []);
-
-    // Auto-rotation loop.
-    useEffect(() => {
-      if (prefersReduced || paused || autoRotateSpeed === 0) return;
-      const tick = () => {
-        setRotation((r) => r + autoRotateSpeed);
-        animationFrameRef.current = requestAnimationFrame(tick);
-      };
-      animationFrameRef.current = requestAnimationFrame(tick);
-      return () => {
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      };
-    }, [autoRotateSpeed, paused, prefersReduced]);
-
-    const anglePerItem = 360 / Math.max(items.length, 1);
+    const anglePerItem = 360 / items.length;
 
     return (
       <div
         ref={(node) => {
           containerRef.current = node;
           if (typeof ref === "function") ref(node);
-          else if (ref) (ref as React.RefObject<HTMLDivElement | null>).current = node;
+          else if (ref) ref.current = node;
         }}
         role="region"
-        aria-label="Certifications carousel"
-        className={cn(
-          "relative flex h-[500px] w-full items-center justify-center overflow-hidden md:h-[560px]",
-          className
-        )}
+        aria-label="Circular gallery"
+        className={cn("relative w-full h-full flex items-center justify-center", className)}
         style={{ perspective: "2000px" }}
+        onMouseEnter={() => (hoveredRef.current = true)}
+        onMouseLeave={() => (hoveredRef.current = false)}
+        onFocus={() => (hoveredRef.current = true)}
+        onBlur={() => (hoveredRef.current = false)}
         {...props}
       >
-        <div
-          className="relative h-full w-full"
-          style={{
-            transform: `rotateY(${rotation}deg)`,
-            transformStyle: "preserve-3d",
-            transition: prefersReduced ? "transform 0.6s ease-out" : undefined,
-          }}
-        >
+        <div ref={stageRef} className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }}>
           {items.map((item, i) => {
             const itemAngle = i * anglePerItem;
-            const relative = ((itemAngle + rotation) % 360 + 360) % 360;
-            const normalized = Math.abs(relative > 180 ? 360 - relative : relative);
-            const opacity = Math.max(0.28, 1 - normalized / 180);
-
             return (
-              <article
-                key={`${item.title}-${i}`}
+              <div
+                key={`${i}-${item.common}`}
+                ref={(el) => {
+                  cardRefs.current[i] = el;
+                }}
                 role="group"
-                aria-label={item.title}
-                className="sheet-corners absolute h-[280px] w-[230px] overflow-hidden rounded-sm border border-border bg-card/80 backdrop-blur-sm md:h-[320px] md:w-[260px]"
+                tabIndex={0}
+                aria-label={item.common}
+                className="absolute w-[240px] h-[320px]"
                 style={{
-                  transform: `rotateY(${itemAngle}deg) translateZ(${effectiveRadius}px)`,
+                  transform: `rotateY(${itemAngle}deg) translateZ(${radius}px)`,
                   left: "50%",
                   top: "50%",
-                  marginLeft: "-130px",
+                  marginLeft: "-120px",
                   marginTop: "-160px",
-                  opacity,
                   transition: "opacity 0.3s linear",
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
                 }}
               >
-                {item.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.image}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover opacity-60"
-                    aria-hidden
-                  />
-                ) : (
-                  <div
-                    className="bp-grid absolute inset-0 opacity-40"
-                    aria-hidden
-                  />
-                )}
-                <div className="relative flex h-full flex-col justify-end p-5">
-                  {item.kicker ? (
-                    <span className="tech-label text-primary">{item.kicker}</span>
-                  ) : null}
-                  <h3 className="mt-2 text-lg font-semibold leading-tight text-foreground">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    {item.authority}
-                  </p>
-                  {item.meta ? (
-                    <p className="tech-label mt-3 text-muted-foreground/70">
-                      {item.meta}
-                    </p>
-                  ) : null}
+                <div className="relative w-full h-full rounded-lg shadow-2xl overflow-hidden border border-border bg-card/70 backdrop-blur-lg">
+                  {item.photo.url ? (
+                    <img
+                      src={item.photo.url}
+                      alt={item.photo.text}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{ objectPosition: item.photo.pos || "center" }}
+                    />
+                  ) : (
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center"
+                      style={{
+                        background: GRADIENTS[i % GRADIENTS.length],
+                        color: "var(--primary-foreground)",
+                      }}
+                    >
+                      <span className="tech-label" style={{ opacity: 0.85 }}>
+                        Photo pending
+                      </span>
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
+                    <h2 className="text-lg font-semibold">{item.common}</h2>
+                    <p className="tech-label mt-1 opacity-85">{item.binomial}</p>
+                  </div>
                 </div>
-                {/* corner rules to keep the drafting-sheet language */}
-                <span
-                  className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-primary/50"
-                  aria-hidden
-                />
-                <span
-                  className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-primary/50"
-                  aria-hidden
-                />
-              </article>
+              </div>
             );
           })}
         </div>
