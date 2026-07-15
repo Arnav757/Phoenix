@@ -4,14 +4,8 @@ import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
 import { motion } from "motion/react";
 import { DIRECTORS, TEAM_MEMBERS, teamIntro } from "@/lib/team";
-import { CircularGallery, type GalleryItem } from "@/components/ui/circular-gallery";
 import { LeadershipCard } from "./leadership-card";
-
-const directorGalleryItems: GalleryItem[] = DIRECTORS.map((member) => ({
-  common: member.name,
-  binomial: member.role,
-  photo: { url: member.photo, text: member.name },
-}));
+import { LeadershipShowcase } from "./leadership-showcase";
 
 // OUR TEAM — same architectural-blueprint presentation board as the rest of
 // the site (bp-grid backdrop, tech-label annotations, sheet-corners cards).
@@ -64,10 +58,10 @@ export function TeamPageClient() {
         {DIRECTORS.length > 0 && (
           <div className="mx-auto mt-24 w-[92vw] max-w-[1720px]">
             <Reveal>
-              <p className="tech-label text-primary">Board of directors</p>
+              <p className="tech-label text-center text-primary">Board of directors</p>
             </Reveal>
-            <div className="mt-8 h-[65vh] min-h-[420px] overflow-hidden">
-              <CircularGallery items={directorGalleryItems} radius={420} />
+            <div className="mt-10">
+              <LeadershipShowcase members={DIRECTORS} />
             </div>
           </div>
         )}

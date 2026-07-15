@@ -16,6 +16,7 @@ export type TeamMember = {
   role: string;
   bio: string;
   photo?: string;
+  quote?: string;
 };
 
 export const TEAM_MEMBERS: TeamMember[] = [

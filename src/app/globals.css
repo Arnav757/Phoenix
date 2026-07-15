@@ -195,6 +195,25 @@
   border-width: 0 1px 1px 0;
 }
 
+/* Leadership showcase keyframes — referenced via inline `animation` in
+   leadership-showcase.tsx (not as classes: a cascade quirk in this project
+   intermittently drops custom-class property declarations, so the actual
+   background/border/glass styling is applied inline; only the @keyframes
+   definitions, which aren't affected, live here). */
+@keyframes showcase-drift {
+  to {
+    background-position: 64px 64px;
+  }
+}
+@keyframes showcase-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
 /* intro overlay entrance animations */
 @keyframes intro-rise {
   to {
