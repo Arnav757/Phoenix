@@ -66,7 +66,8 @@ function DocumentModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] as const }}
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-background/85 p-6 backdrop-blur-md md:p-16"
+          className="fixed inset-0 flex items-center justify-center bg-background/85 p-6 backdrop-blur-md md:p-16"
+          style={{ zIndex: 80 }}
           onClick={onClose}
         >
           <motion.div
@@ -75,7 +76,8 @@ function DocumentModal({
             exit={{ opacity: 0, y: 30, scale: 0.97 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
             onClick={(e) => e.stopPropagation()}
-            className="sheet-corners relative flex h-full max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-sm border border-primary/40 bg-card shadow-[0_20px_80px_-30px_rgba(0,120,243,0.35)] md:flex-row"
+            className="sheet-corners relative flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-sm border border-primary/40 bg-card shadow-[0_20px_80px_-30px_rgba(0,120,243,0.35)] md:flex-row"
+            style={{ maxHeight: "85vh" }}
           >
             {/* Left / top: image or blueprint plate */}
             <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-background p-6 md:p-10">
