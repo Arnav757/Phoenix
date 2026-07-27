@@ -1,10 +1,11 @@
 "use client";
 
-import { memo, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
   useAnimation,
+  useAnimationFrame,
   useMotionValue,
   useReducedMotion,
   useTransform,
@@ -56,6 +57,27 @@ export function useMediaQuery(
   return matches;
 }
 
+// Client-side viewport reads (matchMedia / window.innerWidth / a resize
+// effect) proved unreliable for driving this sizing in this environment —
+// state set from an effect after mount wasn't reflected in the next
+// paint here. Plain CSS clamp() doesn't have that problem: the browser
+// resolves it directly with no JS round-trip, so responsive sizing goes
+// through a CSS custom property instead of React state.
+const CONTAINER_HEIGHT_CSS = "clamp(240px, 31vw, 410px)";
+// Geometry (cylinder width / radius / perspective) needs real numbers for
+// the 3D transform math, so it's pinned to a single reference size — the
+// value a full-width desktop viewport resolves to. Smaller viewports get a
+// visually smaller carousel via the CSS clamp() above (pure CSS, resolved
+// by the browser with no JS round-trip) wrapped in overflow-hidden, which
+// crops the ring rather than resizing the geometry — still reads as a big,
+// legible front card at every size.
+const REFERENCE_FACE_SIZE = 310;
+
+// Degrees per second for the idle auto-rotate — slow enough to read as
+// ambient motion, not a spinner. Paused while the user is dragging or has
+// a face open in the modal.
+const AUTO_ROTATE_DEG_PER_SEC = 6;
+
 const duration = 0.15;
 const transition = {
   duration,
@@ -80,22 +102,43 @@ const Carousel = memo(function Carousel({
   cards,
   isCarouselActive,
 }: CarouselProps) {
-  const isScreenSizeSm = useMediaQuery("(max-width: 640px)");
-  const cylinderWidth = isScreenSizeSm ? 1100 : 1800;
   const faceCount = cards.length;
-  const faceWidth = cylinderWidth / faceCount;
+  // Each face's on-screen size is the circle's circumference split evenly
+  // across faces (faceWidth = cylinderWidth / faceCount) — so to make the
+  // photos themselves bigger (not just the empty space around them), the
+  // fix is to grow cylinderWidth directly. Geometry is pinned to
+  // REFERENCE_FACE_SIZE and the outer wrapper's CSS clamp() (see
+  // CONTAINER_HEIGHT_CSS above) shrinks the whole carousel visually on
+  // narrow screens instead — reliable pure-CSS responsiveness beats a JS
+  // viewport read here.
+  const cylinderWidth = REFERENCE_FACE_SIZE * faceCount;
+  const faceWidth = REFERENCE_FACE_SIZE;
   const radius = cylinderWidth / (2 * Math.PI);
+  // Perspective controls how dramatically the front face is enlarged by
+  // 3D foreshortening vs. the sides — keep the same radius:perspective
+  // ratio the design shipped with (~0.29) so the front card doesn't look
+  // over-warped.
+  const perspective = radius * 3.5;
   const rotation = useMotionValue(0);
   const transform = useTransform(
     rotation,
     (value) => `rotate3d(0, 1, 0, ${value}deg)`
   );
 
+  // Slow idle auto-rotate — paused while dragging or while a face is open
+  // in the modal (isCarouselActive is false in that case).
+  const isDraggingRef = useRef(false);
+  useAnimationFrame((_, delta) => {
+    if (isCarouselActive && !isDraggingRef.current) {
+      rotation.set(rotation.get() + (AUTO_ROTATE_DEG_PER_SEC * delta) / 1000);
+    }
+  });
+
   return (
     <div
       className="flex h-full items-center justify-center"
       style={{
-        perspective: "1000px",
+        perspective: `${perspective}px`,
         transformStyle: "preserve-3d",
         willChange: "transform",
       }}
@@ -109,21 +152,25 @@ const Carousel = memo(function Carousel({
           width: cylinderWidth,
           transformStyle: "preserve-3d",
         }}
+        onDragStart={() => {
+          isDraggingRef.current = true;
+        }}
         onDrag={(_, info) =>
           isCarouselActive && rotation.set(rotation.get() + info.offset.x * 0.05)
         }
-        onDragEnd={(_, info) =>
+        onDragEnd={(_, info) => {
+          isDraggingRef.current = false;
           isCarouselActive &&
-          controls.start({
-            rotateY: rotation.get() + info.velocity.x * 0.05,
-            transition: {
-              type: "spring",
-              stiffness: 100,
-              damping: 30,
-              mass: 0.1,
-            },
-          })
-        }
+            controls.start({
+              rotateY: rotation.get() + info.velocity.x * 0.05,
+              transition: {
+                type: "spring",
+                stiffness: 100,
+                damping: 30,
+                mass: 0.1,
+              },
+            });
+        }}
         animate={controls}
       >
         {cards.map((imgUrl, i) => (
@@ -243,7 +290,10 @@ export function ThreeDPhotoCarousel({
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="relative h-[500px] w-full overflow-hidden">
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ height: CONTAINER_HEIGHT_CSS }}
+      >
         <Carousel
           handleClick={handleClick}
           controls={controls}
