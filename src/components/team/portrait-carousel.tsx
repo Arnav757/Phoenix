@@ -2,23 +2,24 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { UserRound, X } from "lucide-react";
+import { UserRound } from "lucide-react";
 import type { TeamMember } from "@/lib/team";
 
 const ROTATE_MS = 8000;
 
-// Editorial full-bleed portrait carousel — one large cut-out portrait
-// centered on a clean background, adjacent portraits dimmed/blurred to the
-// sides. No cards, no frames — the people are the visual element. Retains
-// auto-rotation, click-to-navigate on side portraits, and click-to-expand
-// biography (now a modal rather than an inline reveal, since there's no
-// card body to expand into). Cinematic transitions use only transform +
-// opacity + filter (GPU-friendly, 60fps).
+// Editorial full-bleed portrait carousel. No cards, no modal — clicking
+// "View Leadership Story" keeps the portrait exactly as it is (still the
+// visual anchor) while a glass panel slides in beside it with a sequenced
+// reveal (name → designation → divider → quote → biography), and
+// Previous/Next live inside the panel so browsing never closes it. Only
+// opacity/transform/filter are animated (GPU-friendly, 60fps); Framer
+// Motion's `layout` prop handles the reflow via transforms rather than
+// tweening width/height.
 //
-// Sizing/backgrounds are applied inline rather than via custom CSS classes —
-// this project has a reproducible cascade bug (see leadership-showcase.tsx)
-// where certain height utilities and custom classes silently fail to apply;
-// inline styles always win. Only @keyframes (unaffected) live in globals.css.
+// Visual/backdrop styling (glass, halo, grid) is applied inline rather than
+// via custom CSS classes or Tailwind arbitrary values — this project has a
+// reproducible cascade bug where those silently fail to apply; inline
+// styles always win. Only @keyframes (unaffected) live in globals.css.
 export function PortraitCarousel({ members }: { members: TeamMember[] }) {
   const count = members.length;
   const [index, setIndex] = useState(0);
@@ -27,6 +28,7 @@ export function PortraitCarousel({ members }: { members: TeamMember[] }) {
   const [progress, setProgress] = useState(0);
   const [pulseKey, setPulseKey] = useState(0);
   const reduceMotion = useReducedMotion();
+  const regionRef = useRef<HTMLDivElement>(null);
 
   const rafRef = useRef<number | null>(null);
   const lastTRef = useRef<number | null>(null);
@@ -47,7 +49,7 @@ export function PortraitCarousel({ members }: { members: TeamMember[] }) {
   const next = useCallback(() => goTo(index + 1), [goTo, index]);
   const prev = useCallback(() => goTo(index - 1), [goTo, index]);
 
-  // Auto-rotate + progress fill. Paused on hover or while the bio modal is open.
+  // Auto-rotate + progress fill. Paused on hover or while the biography panel is open.
   useEffect(() => {
     if (reduceMotion || count <= 1) return;
     const paused = hovering || bioOpen;
@@ -83,13 +85,15 @@ export function PortraitCarousel({ members }: { members: TeamMember[] }) {
         e.preventDefault();
         next();
       } else if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        setBioOpen(true);
+        if (!bioOpen) {
+          e.preventDefault();
+          setBioOpen(true);
+        }
       } else if (e.key === "Escape") {
         setBioOpen(false);
       }
     },
-    [prev, next]
+    [prev, next, bioOpen]
   );
 
   if (count === 0) return null;
@@ -101,6 +105,7 @@ export function PortraitCarousel({ members }: { members: TeamMember[] }) {
 
   return (
     <div
+      ref={regionRef}
       role="region"
       aria-roledescription="carousel"
       aria-label="Leadership"
@@ -111,7 +116,7 @@ export function PortraitCarousel({ members }: { members: TeamMember[] }) {
       className="relative outline-none"
       style={{ minHeight: "78vh" }}
     >
-      {/* backdrop: slow radial drift + faint architectural lines, opacity kept well below 5% */}
+      {/* backdrop: slow radial drift + faint architectural lines */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -151,11 +156,20 @@ export function PortraitCarousel({ members }: { members: TeamMember[] }) {
         </motion.svg>
       )}
 
-      <div className="flex items-center justify-center gap-2 sm:gap-6 md:gap-10">
-        <SidePortrait member={leftMember} onSelect={prev} side="left" />
+      <motion.div
+        layout
+        className="flex flex-col items-center justify-center gap-8 md:flex-row md:items-stretch md:gap-10"
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {!bioOpen && <SidePortrait member={leftMember} onSelect={prev} side="left" />}
 
-        <div className="relative flex flex-col items-center" style={{ width: "min(80vw, 380px)" }}>
-          {/* soft Phoenix-blue halo behind the active portrait */}
+        <motion.div
+          layout
+          className="relative flex flex-col items-center"
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: "min(80vw, 380px)" }}
+        >
+          {/* soft Phoenix-blue halo behind the portrait — retained while open */}
           <div
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-[30%] -z-10"
@@ -210,62 +224,84 @@ export function PortraitCarousel({ members }: { members: TeamMember[] }) {
                 />
               </div>
 
-              <div className="mt-6 text-center">
-                <h3 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                  {active.name}
-                </h3>
-                <p className="tech-label mt-1.5 text-primary">{active.role}</p>
-
-                {active.quote && (
-                  <p className="mx-auto mt-4 max-w-sm text-[15px] italic leading-relaxed text-muted-foreground">
-                    “{active.quote}”
-                  </p>
-                )}
-
-                {hasBio ? (
-                  <button
-                    type="button"
-                    onClick={() => setBioOpen(true)}
-                    className="group mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+              {/* name/role/quote/CTA under the portrait — hidden once the
+                  panel takes over showing this same information */}
+              <AnimatePresence>
+                {!bioOpen && (
+                  <motion.div
+                    initial={reduceMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={reduceMotion ? undefined : { opacity: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="mt-6 text-center"
                   >
-                    Read Biography
-                    <span
-                      aria-hidden
-                      className="inline-block transition-transform duration-300 group-hover:translate-x-0.5"
-                    >
-                      →
-                    </span>
-                  </button>
-                ) : (
-                  <p className="tech-label mt-5 text-muted-foreground/60">Biography pending</p>
+                    <h3 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                      {active.name}
+                    </h3>
+                    <p className="tech-label mt-1.5 text-primary">{active.role}</p>
+
+                    {active.quote && (
+                      <p className="mx-auto mt-4 max-w-sm text-[15px] italic leading-relaxed text-muted-foreground">
+                        “{active.quote}”
+                      </p>
+                    )}
+
+                    {hasBio ? (
+                      <button
+                        type="button"
+                        onClick={() => setBioOpen(true)}
+                        aria-expanded={false}
+                        className="group mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+                      >
+                        View Leadership Story
+                        <span
+                          aria-hidden
+                          className="inline-block transition-transform duration-300 group-hover:translate-x-0.5"
+                        >
+                          →
+                        </span>
+                      </button>
+                    ) : (
+                      <p className="tech-label mt-5 text-muted-foreground/60">Biography pending</p>
+                    )}
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
             </motion.div>
           </AnimatePresence>
-        </div>
+        </motion.div>
 
-        <SidePortrait member={rightMember} onSelect={next} side="right" />
-      </div>
+        {!bioOpen && <SidePortrait member={rightMember} onSelect={next} side="right" />}
 
-      {/* progress indicator */}
-      {count > 1 && !reduceMotion && (
+        <AnimatePresence mode="wait">
+          {bioOpen && (
+            <BiographyPanel
+              key={active.id}
+              member={active}
+              onCollapse={() => setBioOpen(false)}
+              onPrev={prev}
+              onNext={next}
+              reduceMotion={!!reduceMotion}
+            />
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* progress indicator — hidden while the panel has focus */}
+      {count > 1 && !reduceMotion && !bioOpen && (
         <div
           className="mx-auto mt-10 overflow-hidden rounded-full bg-border"
           style={{ height: 2, width: 160 }}
           aria-hidden
         >
-          <div
-            className="h-full rounded-full bg-primary"
-            style={{ width: `${progress * 100}%`, transition: hovering || bioOpen ? "none" : undefined }}
-          />
+          <div className="h-full rounded-full bg-primary" style={{ width: `${progress * 100}%` }} />
         </div>
       )}
 
       <p className="sr-only" aria-live="polite">
         {active.name}, {active.role}
+        {bioOpen ? " — biography expanded" : ""}
       </p>
-
-      <BiographyModal member={active} open={bioOpen} onClose={() => setBioOpen(false)} reduceMotion={!!reduceMotion} />
     </div>
   );
 }
@@ -284,11 +320,15 @@ function SidePortrait({
   onSelect: () => void;
 }) {
   return (
-    <button
+    <motion.button
+      layout
       type="button"
       onClick={onSelect}
       aria-label={`Show ${member.name}`}
       className="hidden shrink-0 md:block"
+      initial={false}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
       style={{
         width: "min(22vw, 220px)",
         height: "min(50vh, 340px)",
@@ -323,7 +363,7 @@ function SidePortrait({
       ) : (
         <PlaceholderSilhouette />
       )}
-    </button>
+    </motion.button>
   );
 }
 
@@ -346,70 +386,151 @@ function PlaceholderSilhouette({ large }: { large?: boolean }) {
 }
 
 // -----------------------------------------------------------------------------
-// Biography modal
+// Biography panel — floating glass, grows from the layout rather than
+// popping over it. Sequenced reveal: name → designation → divider → quote →
+// biography, ~80ms cadence, ~800ms total. Prev/Next re-key this component so
+// the same reveal replays for each director without leaving the panel.
 // -----------------------------------------------------------------------------
 
-function BiographyModal({
+function BiographyPanel({
   member,
-  open,
-  onClose,
+  onCollapse,
+  onPrev,
+  onNext,
   reduceMotion,
 }: {
   member: TeamMember;
-  open: boolean;
-  onClose: () => void;
+  onCollapse: () => void;
+  onPrev: () => void;
+  onNext: () => void;
   reduceMotion: boolean;
 }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Escape collapses; focus moves into the panel when it mounts so keyboard
+  // users land somewhere meaningful rather than losing their place.
   useEffect(() => {
-    if (!open) return;
+    panelRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCollapse();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [onCollapse]);
+
+  const stagger = {
+    hidden: { opacity: 0, y: 12 },
+    show: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: 0.15 + i * 0.09, duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+    }),
+  };
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${member.name} biography`}
-          className="fixed inset-0 z-50 flex items-center justify-center px-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+    <motion.div
+      ref={panelRef}
+      layout
+      tabIndex={-1}
+      role="region"
+      aria-label={`${member.name} biography`}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 48, scale: 0.97, filter: "blur(4px)" }}
+      animate={{ opacity: 1, x: 0, scale: 1, filter: "blur(0px)" }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 24, scale: 0.98, filter: "blur(3px)" }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className="relative w-full outline-none"
+      style={{
+        maxWidth: 560,
+        borderRadius: 26,
+        background: "rgb(255 255 255 / 0.6)",
+        backdropFilter: "blur(22px)",
+        WebkitBackdropFilter: "blur(22px)",
+        border: "1px solid rgb(255 255 255 / 0.7)",
+        boxShadow: "0 24px 70px rgb(15 40 90 / 0.12), inset 0 1px 0 0 rgb(255 255 255 / 0.6)",
+        padding: "2.5rem",
+      }}
+    >
+      <motion.p custom={0} variants={stagger} initial="hidden" animate="show" className="tech-label text-primary">
+        {member.role}
+      </motion.p>
+      <motion.h3
+        custom={1}
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="mt-2 text-3xl font-semibold tracking-tight text-foreground"
+      >
+        {member.name}
+      </motion.h3>
+
+      <motion.div
+        custom={2}
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="mt-6 h-px bg-primary/40"
+        style={{ transformOrigin: "left" }}
+        aria-hidden
+      />
+
+      {member.quote && (
+        <motion.blockquote
+          custom={3}
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="mt-6 border-l-2 pl-4 text-[17px] italic leading-relaxed text-muted-foreground"
+          style={{ borderColor: "var(--primary)", maxWidth: 480 }}
         >
-          <motion.div
-            aria-hidden
-            onClick={onClose}
-            className="absolute inset-0"
-            style={{ background: "rgb(15 40 90 / 0.25)", backdropFilter: "blur(6px)" }}
-          />
-          <motion.div
-            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.97 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl"
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close biography"
-              className="absolute right-5 top-5 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X size={20} />
-            </button>
-            <h3 className="pr-8 text-2xl font-semibold tracking-tight text-foreground">{member.name}</h3>
-            <p className="tech-label mt-1 text-primary">{member.role}</p>
-            <div className="my-4 h-px w-12 bg-primary/50" aria-hidden />
-            <p className="text-sm leading-relaxed text-muted-foreground">{member.bio}</p>
-          </motion.div>
-        </motion.div>
+          “{member.quote}”
+        </motion.blockquote>
       )}
-    </AnimatePresence>
+
+      <motion.div custom={4} variants={stagger} initial="hidden" animate="show" className="mt-6">
+        {member.bio.trim() ? (
+          <p
+            className="text-muted-foreground"
+            style={{ maxWidth: 500, fontSize: 18, lineHeight: 1.75 }}
+          >
+            {member.bio}
+          </p>
+        ) : (
+          <p className="tech-label text-muted-foreground/60">Biography pending client confirmation.</p>
+        )}
+      </motion.div>
+
+      <div className="mt-10 flex items-center justify-between gap-4 border-t border-border pt-6">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onPrev}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          >
+            ← Previous Director
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+          >
+            Next Director →
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-expanded={true}
+          className="group inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+        >
+          Collapse Biography
+          <span
+            aria-hidden
+            className="inline-block transition-transform duration-300 group-hover:-translate-y-0.5"
+          >
+            ↑
+          </span>
+        </button>
+      </div>
+    </motion.div>
   );
 }
