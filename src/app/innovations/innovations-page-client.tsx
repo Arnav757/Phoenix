@@ -4,7 +4,6 @@ import { ArrowUpDown, DoorOpen, Leaf, Radar, Recycle, ShieldCheck, Timer, Waypoi
 import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
 import { motion } from "motion/react";
-import { ElevatorDiagram } from "./elevator-diagram";
 import {
   ecoBuildings,
   innovationsIntro,
@@ -17,12 +16,9 @@ const dcsIcons = [DoorOpen, Timer, Waypoints];
 
 // INNOVATIONS — same architectural-blueprint presentation board as the rest
 // of the site. Content sourced from phoenixindia.net/Innovations — see
-// src/lib/innovations.ts. Site monitoring, steel construction, and
-// eco-friendly buildings use real photography; DCS (vertical transport) had
-// only a small stock icon on the source site, so it gets a purpose-built
-// animated elevator/shaft diagram instead (see elevator-diagram.tsx) —
-// the car travels between floors on its own, and hovering/focusing a
-// benefit highlights the specific detail it's describing.
+// src/lib/innovations.ts. All four sections use real assets from the
+// source site, including the DCS section's high-zone/low-zone floor
+// allocation diagram (control-system.png).
 export function InnovationsPageClient() {
   return (
     <>
@@ -100,13 +96,26 @@ export function InnovationsPageClient() {
           eyebrow={verticalTransport.eyebrow}
           title={verticalTransport.title}
           description={verticalTransport.description}
+          photo={verticalTransport.photo}
+          photoAlt="Destination Control System — high-zone and low-zone floor allocation diagram"
           reverse
-          visual={
-            <ElevatorDiagram
-              benefits={verticalTransport.benefits.map((label, i) => ({ label, icon: dcsIcons[i] }))}
-            />
-          }
-        />
+        >
+          <Stagger className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {verticalTransport.benefits.map((benefit, i) => {
+              const Icon = dcsIcons[i];
+              return (
+                <motion.div
+                  key={benefit}
+                  variants={staggerItem}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
+                >
+                  <Icon size={15} className="shrink-0 text-primary" aria-hidden />
+                  {benefit}
+                </motion.div>
+              );
+            })}
+          </Stagger>
+        </FeatureSection>
 
         {/* Eco-friendly buildings */}
         <FeatureSection

@@ -39,6 +39,10 @@ export const verticalTransport = {
   description:
     "DCS brings long elevator wait times to an end. The vertical movement of employees through the building is smooth and traffic is well-regulated.",
   benefits: ["Avoid Crowded Lobbies and Elevators", "Save on Wait Times", "Natural Flow of Movement"],
+  // Real diagram from the source site — high-zone/low-zone floor
+  // allocation, the actual mechanic DCS uses to group destinations and
+  // cut wait times.
+  photo: "/phoenix/innovations/control-system.png",
 };
 
 export const ecoBuildings = {
