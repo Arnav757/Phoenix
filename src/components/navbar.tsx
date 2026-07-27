@@ -76,6 +76,7 @@ export function Navbar({
         <div className="hidden items-center gap-7 lg:flex">
           {[
             ...sections.slice(1, 6).map((s) => ({ href: `/#${s.id}`, label: s.label })),
+            { href: "/innovations", label: "Innovations" },
             { href: "/awards", label: "Awards" },
             { href: "/partners", label: "Partners" },
             { href: "/team", label: "Team" },
