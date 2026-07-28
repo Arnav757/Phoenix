@@ -241,15 +241,20 @@ export function IntroExperience({
       {/* Scenes 02-05 — the swappable animation slot. Currently a stitched
           three-shot cinematic (hero-opening.mp4). Any component that
           implements IntroSceneProps ({active, onComplete}) drops in here
-          without touching intro/nav/state code. */}
+          without touching intro/nav/state code.
+          object-contain (not cover): the footage is 2:1, wider than most
+          viewports — cover would crop into the composed shot and could
+          read as a jarring, near-random close-up zoom on tall/narrow
+          screens. contain always shows the full frame, letterboxed on a
+          black backdrop that matches the cinematic treatment. */}
       <div
         ref={birdWrapRef}
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 bg-black"
       >
         <HeroVideo
           active={sceneActive}
           onComplete={handleSceneComplete}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
         />
       </div>
 
