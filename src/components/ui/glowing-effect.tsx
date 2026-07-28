@@ -30,6 +30,7 @@ const GlowingEffect = memo(
     disabled = true,
   }: GlowingEffectProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const glowRef = useRef<HTMLDivElement>(null);
     const lastPosition = useRef({ x: 0, y: 0 });
     const animationFrameRef = useRef<number>(0);
 
@@ -60,8 +61,21 @@ const GlowingEffect = memo(
           );
           const inactiveRadius = 0.5 * Math.min(width, height) * inactiveZone;
 
+          // Opacity is set as a real inline style on a real DOM node here
+          // (not via a Tailwind arbitrary-value/property class reading a
+          // --active custom property on the ::after pseudo-element) —
+          // confirmed the class-based approach silently fails to apply in
+          // this project's build regardless of syntax. A small floor keeps
+          // the glow perceptible at rest instead of purely hover-gated.
+          const setOpacity = (active: boolean) => {
+            if (glowRef.current) {
+              glowRef.current.style.opacity = active ? "1" : "0.12";
+            }
+          };
+
           if (distanceFromCenter < inactiveRadius) {
             element.style.setProperty("--active", "0");
+            setOpacity(false);
             return;
           }
 
@@ -72,6 +86,7 @@ const GlowingEffect = memo(
             mouseY < top + height + proximity;
 
           element.style.setProperty("--active", isActive ? "1" : "0");
+          setOpacity(isActive);
 
           if (!isActive) return;
 
@@ -167,13 +182,21 @@ const GlowingEffect = memo(
           )}
         >
           <div
+            ref={glowRef}
+            // Opacity here is a real inline style (see setOpacity in
+            // handleMove above), not a Tailwind class reading --active —
+            // every class-based attempt (opacity-[var(--active)] shorthand,
+            // the equivalent [opacity:...] arbitrary-property form, even a
+            // plain .glow::after rule in globals.css) silently failed to
+            // apply in this project's build. Setting opacity on this real
+            // parent node also dims its ::after pseudo-element with it.
+            style={{ opacity: 0.12, transition: "opacity 300ms ease" }}
             className={cn(
               "glow",
               "rounded-[inherit]",
               'after:content-[""] after:rounded-[inherit] after:absolute after:inset-[calc(-1*var(--glowingeffect-border-width))]',
               "after:[border:var(--glowingeffect-border-width)_solid_transparent]",
               "after:[background:var(--gradient)] after:[background-attachment:fixed]",
-              "after:opacity-[var(--active)] after:transition-opacity after:duration-300",
               "after:[mask-clip:padding-box,border-box]",
               "after:[mask-composite:intersect]",
               "after:[mask-image:linear-gradient(#0000,#0000),conic-gradient(from_calc((var(--start)-var(--spread))*1deg),#00000000_0deg,#fff,#00000000_calc(var(--spread)*2deg))]"
