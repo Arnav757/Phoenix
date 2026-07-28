@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion } from "motion/react";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
+import { GlowingEffectDemo } from "@/components/glowing-effect-demo";
 import { certifications, foundation, stats } from "@/lib/content";
 
 // Sheet 05 — Experience. About already carries the four figures as a large
@@ -47,6 +48,18 @@ export function Experience() {
           </dl>
         </div>
       </Reveal>
+
+      {/* Why Phoenix — glowing feature grid, brand-blue accent. */}
+      <div className="mt-20 md:mt-28">
+        <Reveal>
+          <h3 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            Why Phoenix
+          </h3>
+        </Reveal>
+        <div className="mt-8 md:mt-10">
+          <GlowingEffectDemo />
+        </div>
+      </div>
 
       {/* Two-board composition — certifications spec list + foundation schedule. */}
       <div className="mt-20 grid gap-14 md:mt-28 lg:grid-cols-12">
