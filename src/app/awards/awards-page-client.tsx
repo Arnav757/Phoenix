@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading } from "@/components/reveal";
 import { Button } from "@/components/ui/button";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { ThreeDPhotoCarousel } from "@/components/ui/3d-carousel";
 import { CircularGallery, type GalleryItem } from "@/components/ui/circular-gallery";
 import { awardsPage, certifications, company } from "@/lib/content";
@@ -231,6 +232,7 @@ function AwardTile({
       whileHover={reduce ? undefined : { y: -3 }}
       transition={{ type: "spring", stiffness: 260, damping: 24 }}
     >
+      <GlowingEffect spread={30} glow disabled={false} proximity={48} inactiveZone={0.01} borderWidth={2} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={url}

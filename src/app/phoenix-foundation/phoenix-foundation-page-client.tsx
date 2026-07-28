@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { motion } from "motion/react";
 import {
   accolades,
@@ -245,6 +246,7 @@ function InitiativeSection({
         className="relative overflow-hidden rounded-lg border border-border"
         style={{ aspectRatio: "4 / 3" }}
       >
+        <GlowingEffect spread={35} glow disabled={false} proximity={56} inactiveZone={0.01} borderWidth={2} />
         <img
           src={initiative.photo}
           alt={initiative.title}
@@ -264,6 +266,7 @@ function InitiativeSection({
         className="relative flex items-center justify-center overflow-hidden rounded-lg border border-border bg-card"
         style={{ aspectRatio: "4 / 3" }}
       >
+        <GlowingEffect spread={35} glow disabled={false} proximity={56} inactiveZone={0.01} borderWidth={2} />
         <Icon size={64} className="text-primary/25" aria-hidden />
       </div>
     </Reveal>
@@ -321,6 +324,7 @@ function AccoladesGrid() {
               className="relative overflow-hidden border-b border-border"
               style={{ aspectRatio: "4 / 3" }}
             >
+              <GlowingEffect spread={35} glow disabled={false} proximity={56} inactiveZone={0.01} borderWidth={2} />
               <img
                 src={a.photo}
                 alt={a.title}

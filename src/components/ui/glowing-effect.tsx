@@ -137,10 +137,9 @@ const GlowingEffect = memo(
               "--active": "0",
               "--glowingeffect-border-width": `${borderWidth}px`,
               "--repeating-conic-gradient-times": "5",
-              // Brand-guideline gradient: Phoenix blue as the anchor color,
-              // cycling through the site's secondary palette (sky, green,
-              // yellow) instead of the generic pink/orange/green/blue
-              // Aceternity default — reads as "Phoenix" even mid-glow.
+              // Brand guideline: Phoenix blue only, no secondary palette —
+              // a solid-color glow rather than the multi-hue Aceternity
+              // default, so it reads as "Phoenix" and nothing else.
               "--gradient":
                 variant === "white"
                   ? `repeating-conic-gradient(
@@ -149,15 +148,12 @@ const GlowingEffect = memo(
                   var(--black) calc(25% / var(--repeating-conic-gradient-times))
                 )`
                   : `radial-gradient(circle, #0078f3 10%, #0078f300 20%),
-                radial-gradient(circle at 40% 40%, #7dc9e9 5%, #7dc9e900 15%),
-                radial-gradient(circle at 60% 60%, #a2d6b7 10%, #a2d6b700 20%),
-                radial-gradient(circle at 40% 60%, #ffc964 10%, #ffc96400 20%),
                 repeating-conic-gradient(
                   from 236.84deg at 50% 50%,
                   #0078f3 0%,
-                  #7dc9e9 calc(25% / var(--repeating-conic-gradient-times)),
-                  #a2d6b7 calc(50% / var(--repeating-conic-gradient-times)),
-                  #ffc964 calc(75% / var(--repeating-conic-gradient-times)),
+                  #3d94f5 calc(25% / var(--repeating-conic-gradient-times)),
+                  #0078f3 calc(50% / var(--repeating-conic-gradient-times)),
+                  #0059bf calc(75% / var(--repeating-conic-gradient-times)),
                   #0078f3 calc(100% / var(--repeating-conic-gradient-times))
                 )`,
             } as React.CSSProperties

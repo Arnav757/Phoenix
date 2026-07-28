@@ -3,6 +3,7 @@
 import { ArrowUpDown, DoorOpen, Leaf, Radar, Recycle, ShieldCheck, Timer, Waypoints } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading, Stagger, staggerItem } from "@/components/reveal";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { motion } from "motion/react";
 import {
   ecoBuildings,
@@ -205,6 +206,7 @@ function FeatureSection({
         className="relative overflow-hidden rounded-lg border border-border"
         style={{ aspectRatio: "4 / 3" }}
       >
+        <GlowingEffect spread={35} glow disabled={false} proximity={56} inactiveZone={0.01} borderWidth={2} />
         <img
           src={photo}
           alt={photoAlt || ""}

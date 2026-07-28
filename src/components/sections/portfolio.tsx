@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { Reveal, SectionHeading } from "@/components/reveal";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { projects } from "@/lib/content";
 
 // Portfolio — each project presented as a full-width architectural board:
@@ -45,6 +46,7 @@ function ProjectBoard({
           aria-label={`Open ${project.name} project details`}
           className="sheet-corners group/card relative block overflow-hidden border border-border transition-colors duration-500 hover:border-primary/60"
         >
+          <GlowingEffect spread={40} glow disabled={false} proximity={72} inactiveZone={0.01} borderWidth={2} />
           <motion.div
             style={reduce ? undefined : { y: parallax }}
             className="relative aspect-[16/10] scale-110"
