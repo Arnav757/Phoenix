@@ -89,15 +89,27 @@ export const projects: Project[] = [
     timeline: "Upcoming",
   },
   {
-    title: "Phoenix 14",
-    slug: "phoenix-14",
+    title: "Phoenix Eterna",
+    slug: "eterna",
     status: "upcoming",
     location: "Hitech City, Hyderabad",
     overview:
-      "P-14 by Phoenix is a multi-tower campus planned in a premium pocket of Hitech City, flanked by IKEA and Deloitte and overlooking the undeveloped skyline of the corridor.",
+      "Eterna is a multi-tower campus planned in a premium pocket of Hitech City, flanked by IKEA and Deloitte and overlooking the undeveloped skyline of the corridor.",
     heroImage: "/phoenix/portfolio/phoenix-14.png",
     specifications: [{ label: "Type of space", value: "SEZ" }],
     amenities: ["Club house", "Sports arena"],
+    timeline: "Upcoming",
+  },
+  {
+    // TODO: placeholder entry — needs real location, overview, hero
+    // image and specifications supplied before this goes live.
+    title: "Phoenix Triton",
+    slug: "triton",
+    status: "upcoming",
+    location: "Hyderabad",
+    overview: "Details for Phoenix Triton to be confirmed.",
+    heroImage: "/phoenix/portfolio/phoenix-14.png",
+    specifications: [],
     timeline: "Upcoming",
   },
   {
