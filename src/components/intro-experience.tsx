@@ -246,10 +246,23 @@ export function IntroExperience({
           viewports — cover would crop into the composed shot and could
           read as a jarring, near-random close-up zoom on tall/narrow
           screens. contain always shows the full frame, letterboxed on a
-          black backdrop that matches the cinematic treatment. */}
+          black backdrop that matches the cinematic treatment.
+          Opacity is gated on sceneActive rather than always-on: this wrap
+          sits above the drafting-marks layer in paint order, and a
+          <video> element paints an opaque black box by default before its
+          first frame is ready — with the backdrop always visible, that
+          blacked out the whole Scene 01 windup (and any stall before
+          playback actually starts) instead of showing the drafting marks
+          underneath, which read as the intro being stuck on a blank
+          screen. Fading it in only once the video is actually playing
+          keeps the backdrop for real playback without blocking Scene 01. */}
       <div
         ref={birdWrapRef}
         className="pointer-events-none absolute inset-0 bg-black"
+        style={{
+          opacity: sceneActive ? 1 : 0,
+          transition: "opacity 0.4s ease",
+        }}
       >
         <HeroVideo
           active={sceneActive}
