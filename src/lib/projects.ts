@@ -95,20 +95,20 @@ export const projects: Project[] = [
     location: "Hitech City, Hyderabad",
     overview:
       "Eterna is a multi-tower campus planned in a premium pocket of Hitech City, flanked by IKEA and Deloitte and overlooking the undeveloped skyline of the corridor.",
-    heroImage: "/phoenix/portfolio/phoenix-14.png",
+    heroImage: "/phoenix/portfolio/eterna.jpg",
     specifications: [{ label: "Type of space", value: "SEZ" }],
     amenities: ["Club house", "Sports arena"],
     timeline: "Upcoming",
   },
   {
-    // TODO: placeholder entry — needs real location, overview, hero
-    // image and specifications supplied before this goes live.
+    // TODO: hero render supplied — location, overview and specifications
+    // still need to be confirmed before this goes live.
     title: "Phoenix Triton",
     slug: "triton",
     status: "upcoming",
     location: "Hyderabad",
     overview: "Details for Phoenix Triton to be confirmed.",
-    heroImage: "/phoenix/portfolio/phoenix-14.png",
+    heroImage: "/phoenix/portfolio/triton.jpg",
     specifications: [],
     timeline: "Upcoming",
   },
