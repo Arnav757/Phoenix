@@ -112,11 +112,40 @@ const GlowingEffect = memo(
       [inactiveZone, proximity, movementDuration]
     );
 
+    // Every instance of this component (there are 5-10+ per index/grid
+    // page) independently listened to window scroll + document pointermove
+    // unconditionally, each doing a getBoundingClientRect() (forced
+    // synchronous layout) per event regardless of whether it was anywhere
+    // near the viewport — on pages with many cards (e.g. the 10-card
+    // Completed Projects grid) that's many forced layouts on every single
+    // scroll tick, which reads as scroll lag/jank. Gate both listeners
+    // behind an IntersectionObserver so only cards actually on/near
+    // screen do any work; off-screen ones stay fully idle.
+    const isNearViewportRef = useRef(false);
+
+    useEffect(() => {
+      if (disabled || !containerRef.current) return;
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          isNearViewportRef.current = entry.isIntersecting;
+        },
+        { rootMargin: "200px" }
+      );
+      observer.observe(containerRef.current);
+
+      return () => observer.disconnect();
+    }, [disabled]);
+
     useEffect(() => {
       if (disabled) return;
 
-      const handleScroll = () => handleMove();
-      const handlePointerMove = (e: PointerEvent) => handleMove(e);
+      const handleScroll = () => {
+        if (isNearViewportRef.current) handleMove();
+      };
+      const handlePointerMove = (e: PointerEvent) => {
+        if (isNearViewportRef.current) handleMove(e);
+      };
 
       window.addEventListener("scroll", handleScroll, { passive: true });
       document.body.addEventListener("pointermove", handlePointerMove, {
