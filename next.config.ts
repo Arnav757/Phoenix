@@ -28,6 +28,8 @@ const csp = [
   "media-src 'self' blob:",
   "font-src 'self' data:",
   `connect-src 'self' ${SUPABASE_URL} https://*.supabase.co wss://*.supabase.co`.trim(),
+  // Google Maps embeds on portfolio project pages (location section).
+  "frame-src 'self' https://maps.google.com https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -66,6 +68,16 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       { source: "/phoenix/:path*", headers: longCache },
       { source: "/_next/static/:path*", headers: longCache },
+    ];
+  },
+
+  // The individual project pages moved from /projects/[id] into the new
+  // /portfolio/[status]/[slug] tree — redirect the old URLs so existing
+  // links/bookmarks/search results keep working.
+  async redirects() {
+    return [
+      { source: "/projects/equinox", destination: "/portfolio/upcoming/equinox", permanent: true },
+      { source: "/projects/aquila", destination: "/portfolio/completed/aquila", permanent: true },
     ];
   },
 };

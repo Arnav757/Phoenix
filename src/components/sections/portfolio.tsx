@@ -42,7 +42,7 @@ function ProjectBoard({
       {/* image plate — the architecture dominates the board */}
       <Reveal className={`relative lg:col-span-8 ${flip ? "lg:order-2" : ""}`}>
         <Link
-          href={`/projects/${project.id}`}
+          href={`/portfolio/${project.status.toLowerCase()}/${project.id}`}
           aria-label={`Open ${project.name} project details`}
           className="sheet-corners group/card relative block overflow-hidden border border-border transition-colors duration-500 hover:border-primary/60"
         >
@@ -158,6 +158,14 @@ export function Portfolio() {
           <ProjectBoard key={p.id} project={p} index={i} flip={i % 2 === 1} />
         ))}
       </div>
+      <Reveal className="mt-24 text-center md:mt-32">
+        <Link
+          href="/portfolio"
+          className="tech-label inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-foreground transition-colors hover:border-primary/60 hover:text-primary"
+        >
+          View full portfolio ↗
+        </Link>
+      </Reveal>
     </section>
   );
 }

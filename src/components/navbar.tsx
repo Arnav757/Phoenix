@@ -75,7 +75,15 @@ export function Navbar({
         )}
         <div className="hidden items-center gap-7 lg:flex">
           {[
-            ...sections.slice(1, 6).map((s) => ({ href: `/#${s.id}`, label: s.label })),
+            ...sections
+              .slice(1, 6)
+              // "Portfolio" now has its own dedicated route tree
+              // (/portfolio, upcoming/completed indexes, project pages)
+              // rather than being a homepage anchor.
+              .map((s) => ({
+                href: s.id === "portfolio" ? "/portfolio" : `/#${s.id}`,
+                label: s.label,
+              })),
             { href: "/innovations", label: "Innovations" },
             { href: "/phoenix-foundation", label: "Foundation" },
             { href: "/awards", label: "Awards" },
