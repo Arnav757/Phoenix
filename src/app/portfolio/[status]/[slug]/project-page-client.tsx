@@ -46,20 +46,27 @@ export function ProjectPageClient({
           </Reveal>
 
           <div className="relative mt-8 grid grid-cols-1 items-end gap-10 lg:grid-cols-12 lg:gap-14">
-            {/* image plate */}
+            {/* image plate — projects with real construction-simulation
+                footage play it here directly (video → real photo, once,
+                on open), exactly as the plate itself rather than as a
+                separate section further down the page. */}
             <Reveal className="relative lg:col-span-8">
-              <div className="sheet-corners relative overflow-hidden border border-border" style={{ aspectRatio: "16 / 10" }}>
-                <GlowingEffect spread={40} glow disabled={false} proximity={72} inactiveZone={0.01} borderWidth={2} />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={project.heroImage}
-                  alt={project.title}
-                  loading="eager"
-                  decoding="async"
-                  fetchPriority="high"
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
+              {project.heroVideo ? (
+                <ConstructionReveal video={project.heroVideo} image={project.heroImage} name={project.title} />
+              ) : (
+                <div className="sheet-corners relative overflow-hidden border border-border" style={{ aspectRatio: "16 / 10" }}>
+                  <GlowingEffect spread={40} glow disabled={false} proximity={72} inactiveZone={0.01} borderWidth={2} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={project.heroImage}
+                    alt={project.title}
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+              )}
             </Reveal>
 
             {/* copy column — name, register lines, factsheet */}
@@ -118,23 +125,6 @@ export function ProjectPageClient({
             </div>
           </div>
         </section>
-
-        {/* ── Construction reveal (optional — projects with real
-            construction-simulation footage) ──────────────────────── */}
-        {project.heroVideo && (
-          <section className="mx-auto mt-16 w-[92vw] max-w-[1720px] md:mt-24">
-            <Reveal>
-              <p className="tech-label text-primary">
-                {isUpcoming ? "Under construction" : "As built"}
-              </p>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <div className="mt-6 max-w-2xl">
-                <ConstructionReveal video={project.heroVideo} image={project.heroImage} name={project.title} />
-              </div>
-            </Reveal>
-          </section>
-        )}
 
         {/* ── Location ─────────────────────────────────────────────── */}
         <section className="mx-auto mt-20 w-[92vw] max-w-[1720px] md:mt-28">
