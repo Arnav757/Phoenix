@@ -45,6 +45,18 @@ export function ProjectPageClient({
             style={{ background: "linear-gradient(to top, rgb(0 0 0 / 0.75) 0%, rgb(0 0 0 / 0.1) 55%, transparent 80%)" }}
             aria-hidden
           />
+          {/* Separate top-anchored darkening so the fixed navbar (which
+              overlaps this hero) stays legible regardless of how bright
+              the underlying image is — the bottom gradient above fades to
+              fully transparent by the top, leaving nav text unprotected. */}
+          <div
+            className="absolute inset-x-0 top-0"
+            style={{
+              height: "clamp(160px, 20vw, 192px)",
+              background: "linear-gradient(to bottom, rgb(0 0 0 / 0.6) 0%, transparent 100%)",
+            }}
+            aria-hidden
+          />
           <div className="absolute inset-x-0 top-0 z-10 pt-24 md:pt-28">
             <div className="mx-auto flex w-[92vw] max-w-[1720px] items-baseline justify-between">
               <Link
