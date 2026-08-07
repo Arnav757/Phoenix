@@ -137,11 +137,25 @@ const GlowingEffect = memo(
       return () => observer.disconnect();
     }, [disabled]);
 
+    // Lenis (this site's smooth-scroll) keeps firing native "scroll"
+    // events on nearly every animation frame for over a second after each
+    // scroll gesture as it eases to a stop — so even gated to near-
+    // viewport cards, this was still doing a layout read up to ~60
+    // times/sec per visible card while a scroll settles. The glow's
+    // proximity effect doesn't need that precision; throttling it to
+    // ~12/sec is imperceptible here but cuts the work by ~5x.
+    const lastScrollUpdateRef = useRef(0);
+    const SCROLL_THROTTLE_MS = 80;
+
     useEffect(() => {
       if (disabled) return;
 
       const handleScroll = () => {
-        if (isNearViewportRef.current) handleMove();
+        if (!isNearViewportRef.current) return;
+        const now = performance.now();
+        if (now - lastScrollUpdateRef.current < SCROLL_THROTTLE_MS) return;
+        lastScrollUpdateRef.current = now;
+        handleMove();
       };
       const handlePointerMove = (e: PointerEvent) => {
         if (isNearViewportRef.current) handleMove(e);

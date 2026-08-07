@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { motion } from "motion/react";
@@ -70,14 +71,20 @@ export function PortfolioIndexClient({
               >
                 <GlowingEffect spread={35} glow disabled={false} proximity={56} inactiveZone={0.01} borderWidth={2} />
                 <div className="relative overflow-hidden border-b border-border" style={{ aspectRatio: "4 / 3" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  {/* next/image instead of a raw <img>: the source photos
+                      are ~2200px wide but a grid card only ever displays
+                      one at ~30-90vw — without responsive sizing the
+                      browser was downloading and decoding the full-
+                      resolution JPEG for every card, which is expensive
+                      and was compounding into scroll jank as cards
+                      lazy-loaded into view. */}
+                  <Image
                     src={p.heroImage}
                     alt={p.title}
+                    fill
                     loading="lazy"
-                    decoding="async"
-                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                    className="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                    sizes="(min-width: 1280px) 30vw, (min-width: 768px) 44vw, 92vw"
+                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                   />
                   <span className="tech-label absolute left-3 top-3 rounded-full border border-primary/30 bg-background/75 px-3 py-1 text-muted-foreground backdrop-blur-sm">
                     {p.timeline ?? (status === "completed" ? "Completed" : "Upcoming")}
