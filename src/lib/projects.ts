@@ -5,14 +5,17 @@
 // /portfolio route tree (gateway, index pages, project pages) reads from —
 // add a project by appending an entry here, no route/layout changes needed.
 //
-// Per client instruction: Commercial and SEZ are not exposed as
-// user-facing categories — every project scraped from those two source
-// pages is merged into one "upcoming" collection (except Aquila, which is
-// already delivered). Only Equinox and Aquila have deep content
-// (gallery/specs/video) for now; the rest carry the real name, location,
-// description, building configuration and amenities available on the
-// source site — optional sections (masterplan, floor plans, sustainability,
-// construction progress) simply don't render until that data is supplied.
+// phoenixindia.net/commercial is headed "Completed Projects" on the source
+// site — every project scraped from it is "completed" here too, except
+// Equinox (still under construction; kept "upcoming" per client
+// instruction). phoenixindia.net/sez-projects is the real "Upcoming
+// Projects" source page. Commercial and SEZ are not exposed as
+// user-facing categories on this site. Only Equinox and Aquila have deep
+// content (gallery/specs/video) for now; the rest carry the real name,
+// location, description, building configuration and amenities available
+// on the source site — optional sections (masterplan, floor plans,
+// sustainability, construction progress) simply don't render until that
+// data is supplied.
 
 export type ProjectStatus = "upcoming" | "completed";
 
@@ -115,7 +118,7 @@ export const projects: Project[] = [
   {
     title: "Phoenix Avance Business Hub",
     slug: "avance-business-hub",
-    status: "upcoming",
+    status: "completed",
     location: "Hitech City, Hyderabad",
     overview:
       "Phoenix Avance Business Hub is a commercial project offering well-designed, affordable office spaces across 10 business towers in the heart of Hitech City.",
@@ -128,12 +131,12 @@ export const projects: Project[] = [
       { label: "Built-up area", value: "5.5 mil sq ft" },
     ],
     amenities: ["Club house", "Outdoor cafe"],
-    timeline: "Upcoming",
+    timeline: "Completed",
   },
   {
     title: "Phoenix Lithop",
     slug: "lithop",
-    status: "upcoming",
+    status: "completed",
     location: "Jubilee Hills, Hyderabad",
     overview:
       "Phoenix Lithop is a commercial project designed to simplify everyday life. Spread over 0.56 million sq ft, Lithop features 14 floors of office space.",
@@ -146,12 +149,12 @@ export const projects: Project[] = [
       { label: "Built-up area", value: "0.5 mil sq ft" },
     ],
     amenities: ["Club house", "Sports arena"],
-    timeline: "Upcoming",
+    timeline: "Completed",
   },
   {
     title: "Phoenix Primea",
     slug: "primea",
-    status: "upcoming",
+    status: "completed",
     location: "Financial District, Hyderabad",
     overview:
       "Phoenix Primea is a state-of-the-art commercial project of 0.22 mil sq ft located in Nanakramguda, with 3 business towers comprising 6 floors of office space.",
@@ -163,12 +166,12 @@ export const projects: Project[] = [
       { label: "Type of space", value: "Non-SEZ" },
       { label: "Built-up area", value: "2,25,000 sq ft" },
     ],
-    timeline: "Upcoming",
+    timeline: "Completed",
   },
   {
     title: "Phoenix Centaurus",
     slug: "centaurus",
-    status: "upcoming",
+    status: "completed",
     location: "Financial District, Hyderabad",
     overview:
       "Centaurus is a state-of-the-art project centrally located in Hyderabad's financial district — a large tower spread across 2 million sq ft.",
@@ -181,14 +184,14 @@ export const projects: Project[] = [
       { label: "Built-up area", value: "2.1 mil sq ft" },
     ],
     amenities: ["Food court", "Creche", "Gym", "Retail"],
-    timeline: "Upcoming",
+    timeline: "Completed",
     sustainability:
       "IGBC precertified — see the Awards & Certifications page for the full certification record.",
   },
   {
     title: "Phoenix Trivium",
     slug: "trivium",
-    status: "upcoming",
+    status: "completed",
     location: "Hafeezpet, Hyderabad",
     overview:
       "Phoenix Trivium is a commercial project of 0.9 mil sq ft located in the growing micro-market of Hafeezpet, intelligently designed to enhance efficiency.",
@@ -200,12 +203,12 @@ export const projects: Project[] = [
       { label: "Type of space", value: "Commercial" },
       { label: "Built-up area", value: "0.9 mil sq ft" },
     ],
-    timeline: "Upcoming",
+    timeline: "Completed",
   },
   {
     title: "Phoenix Golf Edge Commercial",
     slug: "golf-edge-commercial",
-    status: "upcoming",
+    status: "completed",
     location: "Financial District, Hyderabad",
     overview:
       "Phoenix Golf Edge Commercial is a project spread across 0.3 mil sq ft, consisting of 1 tower of 24 floors and 3 basement floors, located in Gachibowli.",
@@ -217,12 +220,12 @@ export const projects: Project[] = [
       { label: "Type of space", value: "Commercial" },
       { label: "Built-up area", value: "0.3 mil sq ft" },
     ],
-    timeline: "Upcoming",
+    timeline: "Completed",
   },
   {
     title: "Phoenix Ivy",
     slug: "ivy",
-    status: "upcoming",
+    status: "completed",
     location: "Jubilee Hills, Hyderabad",
     overview:
       "Phoenix Ivy is a commercial project located in the bustling and vibrant area of Filmnagar, Jubilee Hills, set on 0.25 mil sq ft.",
@@ -234,12 +237,12 @@ export const projects: Project[] = [
       { label: "Type of space", value: "Commercial" },
       { label: "Built-up area", value: "0.25 mil sq ft" },
     ],
-    timeline: "Upcoming",
+    timeline: "Completed",
   },
   {
     title: "H-09, Avance Business Hub",
     slug: "h09-avance-business-hub",
-    status: "upcoming",
+    status: "completed",
     location: "Hitech City, Hyderabad",
     overview:
       "H-09, an addition to the Avance Business Hub, is an IT/ITeS SEZ office space in the bustling IT corridor of Hitech City, conveniently located within the existing campus.",
@@ -252,7 +255,7 @@ export const projects: Project[] = [
       { label: "Built-up area", value: "1.14 mil sq ft" },
     ],
     amenities: ["Outdoor cafe"],
-    timeline: "Upcoming",
+    timeline: "Completed",
   },
 
   // ── Completed ─────────────────────────────────────────────────────
