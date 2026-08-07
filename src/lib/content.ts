@@ -34,7 +34,7 @@ export const projects = [
   {
     id: "equinox",
     name: "Phoenix Equinox",
-    status: "Upcoming",
+    status: "Completed",
     location: "Hitech City, Hyderabad",
     description:
       "Equinox is a landmark project adjacent to IKEA, spread over 6.5 acres, with 20 floors. These towers offer picturesque views of the city and are easily accessible from the Hitech City metro station.",

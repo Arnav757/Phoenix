@@ -6,11 +6,10 @@
 // add a project by appending an entry here, no route/layout changes needed.
 //
 // phoenixindia.net/commercial is headed "Completed Projects" on the source
-// site — every project scraped from it is "completed" here too, except
-// Equinox (still under construction; kept "upcoming" per client
-// instruction). phoenixindia.net/sez-projects is the real "Upcoming
-// Projects" source page. Commercial and SEZ are not exposed as
-// user-facing categories on this site. Only Equinox and Aquila have deep
+// site — every project scraped from it, including Equinox, is "completed"
+// here too. phoenixindia.net/sez-projects is the real "Upcoming Projects"
+// source page. Commercial and SEZ are not exposed as user-facing
+// categories on this site. Only Equinox and Aquila have deep
 // content (gallery/specs/video) for now; the rest carry the real name,
 // location, description, building configuration and amenities available
 // on the source site — optional sections (masterplan, floor plans,
@@ -48,7 +47,7 @@ export const projects: Project[] = [
   {
     title: "Phoenix Equinox",
     slug: "equinox",
-    status: "upcoming",
+    status: "completed",
     location: "Hitech City, Hyderabad",
     overview:
       "Equinox is a landmark project adjacent to IKEA, spread over 6.5 acres, with 20 floors. These towers offer picturesque views of the city and are easily accessible from the Hitech City metro station.",
@@ -63,9 +62,7 @@ export const projects: Project[] = [
       { label: "Built-up area", value: "2.7 mil sq ft" },
     ],
     amenities: ["Club house", "Sports arena"],
-    timeline: "Under construction",
-    constructionProgress:
-      "Live construction-simulation footage is available above — the reveal plays automatically on open.",
+    timeline: "Completed",
   },
   {
     title: "Phoenix Business Hub",

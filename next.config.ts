@@ -76,7 +76,7 @@ const nextConfig: NextConfig = {
   // links/bookmarks/search results keep working.
   async redirects() {
     return [
-      { source: "/projects/equinox", destination: "/portfolio/upcoming/equinox", permanent: true },
+      { source: "/projects/equinox", destination: "/portfolio/completed/equinox", permanent: true },
       { source: "/projects/aquila", destination: "/portfolio/completed/aquila", permanent: true },
     ];
   },
