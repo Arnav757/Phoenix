@@ -32,8 +32,12 @@ export function ProjectPageClient({
       <div className="bp-grid pointer-events-none fixed inset-0 -z-10 opacity-[0.35]" aria-hidden />
 
       <main className="pb-28">
-        {/* ── Fullscreen hero ─────────────────────────────────────── */}
-        <section className="relative h-[92svh] min-h-[560px] w-full overflow-hidden">
+        {/* ── Hero ────────────────────────────────────────────────────
+            Sized to the renders' own aspect ratio (16:9, matching the
+            client-supplied hero shots) rather than a fixed viewport
+            height — cover on a mismatched aspect was cropping the
+            building off the edges of the frame. */}
+        <section className="relative w-full overflow-hidden" style={{ aspectRatio: "16 / 9" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={project.heroImage}
