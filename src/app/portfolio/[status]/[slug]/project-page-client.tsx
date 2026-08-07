@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { motion } from "motion/react";
 import { Navbar } from "@/components/navbar";
 import { Reveal, Stagger, staggerItem } from "@/components/reveal";
 import { Button } from "@/components/ui/button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { ConstructionReveal } from "@/components/construction-reveal";
-import { company } from "@/lib/content";
 import type { Project } from "@/lib/projects";
 
 // Reusable project page template — every field is optional except the
@@ -31,94 +30,91 @@ export function ProjectPageClient({
       <Navbar visible />
       <div className="bp-grid pointer-events-none fixed inset-0 -z-10 opacity-[0.35]" aria-hidden />
 
-      <main className="pb-28">
-        {/* ── Hero ────────────────────────────────────────────────────
-            Sized to the renders' own aspect ratio (16:9, matching the
-            client-supplied hero shots) rather than a fixed viewport
-            height — cover on a mismatched aspect was cropping the
-            building off the edges of the frame. */}
-        <section className="relative w-full overflow-hidden" style={{ aspectRatio: "16 / 9" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={project.heroImage}
-            alt={project.title}
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(to top, rgb(0 0 0 / 0.75) 0%, rgb(0 0 0 / 0.1) 55%, transparent 80%)" }}
-            aria-hidden
-          />
-          {/* Separate top-anchored darkening so the fixed navbar (which
-              overlaps this hero) stays legible regardless of how bright
-              the underlying image is — the bottom gradient above fades to
-              fully transparent by the top, leaving nav text unprotected. */}
-          <div
-            className="absolute inset-x-0 top-0"
-            style={{
-              height: "clamp(160px, 20vw, 192px)",
-              background: "linear-gradient(to bottom, rgb(0 0 0 / 0.6) 0%, transparent 100%)",
-            }}
-            aria-hidden
-          />
-          <div className="absolute inset-x-0 top-0 z-10 pt-24 md:pt-28">
-            <div className="mx-auto flex w-[92vw] max-w-[1720px] items-baseline justify-between">
-              <Link
-                href={`/portfolio/${project.status}`}
-                className="tech-label text-white/70 transition-colors hover:text-white"
-              >
-                ← {isUpcoming ? "Upcoming" : "Completed"} projects
-              </Link>
-              <span className="tech-label hidden text-white/50 md:inline">
-                {company.name} / Portfolio
-              </span>
-            </div>
-          </div>
-          <div className="absolute inset-x-0 bottom-0 z-10 pb-14 md:pb-20">
-            <div className="mx-auto w-[92vw] max-w-[1720px]">
+      <main className="pb-28 pt-28 md:pt-32">
+        {/* ── Board — same architectural-board presentation as the
+            Portfolio listings (image plate + numbered copy column +
+            factsheet): a single, unflipped board sized for one project
+            rather than a list. ──────────────────────────────────────── */}
+        <section className="mx-auto w-[92vw] max-w-[1720px]">
+          <Reveal>
+            <Link
+              href={`/portfolio/${project.status}`}
+              className="tech-label text-muted-foreground transition-colors hover:text-primary"
+            >
+              ← {isUpcoming ? "Upcoming" : "Completed"} projects
+            </Link>
+          </Reveal>
+
+          <div className="relative mt-8 grid grid-cols-1 items-end gap-10 lg:grid-cols-12 lg:gap-14">
+            {/* image plate */}
+            <Reveal className="relative lg:col-span-8">
+              <div className="sheet-corners relative overflow-hidden border border-border" style={{ aspectRatio: "16 / 10" }}>
+                <GlowingEffect spread={40} glow disabled={false} proximity={72} inactiveZone={0.01} borderWidth={2} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={project.heroImage}
+                  alt={project.title}
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+            </Reveal>
+
+            {/* copy column — name, register lines, factsheet */}
+            <div className="lg:col-span-4">
               <Reveal>
-                <span className="tech-label text-primary/90">
-                  {project.timeline ?? (isUpcoming ? "Upcoming" : "Completed")}
-                </span>
-                <h1
-                  className="mt-3 font-semibold tracking-tight text-white"
-                  style={{ fontSize: "clamp(2.5rem, 7vw, 6.5rem)", lineHeight: 1.0, textWrap: "balance" }}
-                >
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
                   {project.title}
                 </h1>
-                <p className="tech-label mt-4 flex items-center gap-2 text-white/70">
-                  <MapPin size={13} aria-hidden />
-                  {project.location}
-                </p>
+                <div className="mt-5 space-y-1.5">
+                  <p className="tech-label text-primary">
+                    {project.timeline ?? (isUpcoming ? "Upcoming" : "Completed")}
+                  </p>
+                  <p className="tech-label text-muted-foreground">{project.location}</p>
+                </div>
               </Reveal>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Overview ────────────────────────────────────────────── */}
-        <section className="mx-auto mt-20 w-[92vw] max-w-[1720px] md:mt-28">
-          <div className="grid gap-10 lg:grid-cols-12">
-            <div className="lg:col-span-8">
-              <Reveal>
-                <p className="max-w-2xl text-xl leading-relaxed text-foreground md:text-2xl" style={{ textWrap: "balance" }}>
+              <Reveal delay={0.1}>
+                <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
                   {project.overview}
                 </p>
               </Reveal>
-            </div>
-            <div className="lg:col-span-4">
-              <Reveal delay={0.1}>
+              {project.specifications.length > 0 && (
+                <Reveal delay={0.18}>
+                  <dl className="mt-10 border-b border-border">
+                    {project.specifications.map((s) => (
+                      <div
+                        key={s.label}
+                        className="flex items-baseline justify-between gap-6 border-t border-border py-3.5"
+                      >
+                        <dt className="tech-label text-muted-foreground">{s.label}</dt>
+                        <dd className="font-semibold text-foreground">{s.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Reveal>
+              )}
+              <Reveal delay={0.24}>
                 <Button
                   render={<Link href="/#contact" />}
                   nativeButton={false}
                   size="lg"
-                  className="w-full rounded-full sm:w-auto"
+                  className="mt-8 w-full rounded-full"
                 >
                   Enquire about this project
                 </Button>
               </Reveal>
+            </div>
+
+            {/* margin annotation */}
+            <div
+              className="pointer-events-none absolute inset-0 hidden text-muted-foreground/25 md:block"
+              aria-hidden
+            >
+              <span className="tech-label absolute -top-10 right-0">
+                DWG {project.slug.toUpperCase()} — {project.location.split(",")[0]}
+              </span>
             </div>
           </div>
         </section>
@@ -139,25 +135,6 @@ export function ProjectPageClient({
             </Reveal>
           </section>
         )}
-
-        {/* ── Key facts / specifications ──────────────────────────── */}
-        <section className="mx-auto mt-16 w-[92vw] max-w-[1720px] md:mt-24">
-          <Reveal>
-            <p className="tech-label text-primary">Project statistics</p>
-          </Reveal>
-          <Stagger
-            className={`mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border ${
-              project.specifications.length > 3 ? "md:grid-cols-4" : "md:grid-cols-3"
-            }`}
-          >
-            {project.specifications.map((s) => (
-              <motion.div key={s.label} variants={staggerItem} className="bg-card p-6">
-                <dt className="tech-label text-muted-foreground">{s.label}</dt>
-                <dd className="mt-2 text-xl font-semibold tracking-tight text-foreground">{s.value}</dd>
-              </motion.div>
-            ))}
-          </Stagger>
-        </section>
 
         {/* ── Location ─────────────────────────────────────────────── */}
         <section className="mx-auto mt-20 w-[92vw] max-w-[1720px] md:mt-28">

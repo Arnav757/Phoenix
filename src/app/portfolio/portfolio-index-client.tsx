@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { ArrowUpRight } from "lucide-react";
+import { motion } from "motion/react";
 import { Navbar } from "@/components/navbar";
-import { Reveal } from "@/components/reveal";
+import { Reveal, Stagger, staggerItem } from "@/components/reveal";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import type { Project, ProjectStatus } from "@/lib/projects";
 
@@ -21,144 +20,6 @@ const copy: Record<ProjectStatus, { kicker: string; title: string; lede: string 
     lede: "Projects successfully delivered and handed over.",
   },
 };
-
-// Same architectural-board presentation as the homepage Portfolio teaser
-// (components/sections/portfolio.tsx) — a dominant image plate with a
-// blueprint veil that wipes away on scroll, beside a numbered copy column
-// with a factsheet. Kept identical here so the full index and the
-// homepage preview read as the same drawing set.
-function ProjectBoard({
-  project,
-  index,
-  flip,
-  status,
-}: {
-  project: Project;
-  index: number;
-  flip: boolean;
-  status: ProjectStatus;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "end start"],
-  });
-  const parallax = useTransform(scrollYProgress, [0, 1], ["-6%", "6%"]);
-
-  const num = String(index + 1).padStart(2, "0");
-  const district = project.location.split(",")[0];
-  const statusLabel = status === "completed" ? "Completed" : project.timeline ?? "Upcoming";
-
-  return (
-    <div
-      ref={ref}
-      className="relative grid grid-cols-1 items-end gap-10 lg:grid-cols-12 lg:gap-14"
-    >
-      {/* image plate — the architecture dominates the board */}
-      <Reveal className={`relative lg:col-span-8 ${flip ? "lg:order-2" : ""}`}>
-        <Link
-          href={`/portfolio/${status}/${project.slug}`}
-          aria-label={`Open ${project.title} project details`}
-          className="sheet-corners group/card relative block overflow-hidden border border-border transition-colors duration-500 hover:border-primary/60"
-        >
-          <GlowingEffect spread={40} glow disabled={false} proximity={72} inactiveZone={0.01} borderWidth={2} />
-          <motion.div
-            style={reduce ? undefined : { y: parallax }}
-            className="relative aspect-[16/10] scale-110"
-          >
-            <Image
-              src={project.heroImage}
-              alt={project.title}
-              fill
-              sizes="(min-width: 1024px) 62vw, 92vw"
-              className="object-cover"
-            />
-            {/* blueprint veil that wipes away on scroll into view */}
-            <motion.div
-              initial={reduce ? { opacity: 0 } : { clipPath: "inset(0 0 0 0)" }}
-              whileInView={
-                reduce ? { opacity: 0 } : { clipPath: "inset(0 0 100% 0)" }
-              }
-              viewport={{ once: true, amount: 0.45 }}
-              transition={{ duration: 1.4, ease: [0.65, 0, 0.35, 1], delay: 0.2 }}
-              className="bp-grid absolute inset-0 bg-background/85 backdrop-saturate-0"
-              aria-hidden
-            >
-              <div className="absolute inset-6 border border-dashed border-primary/40" />
-              <span className="tech-label absolute bottom-8 left-8 text-primary">
-                DWG {project.slug.toUpperCase()} — {statusLabel}
-              </span>
-            </motion.div>
-            {/* hover cue */}
-            <span className="tech-label absolute bottom-5 right-5 rounded-full border border-primary/50 bg-background/80 px-4 py-2 text-primary opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/card:opacity-100">
-              View project ↗
-            </span>
-          </motion.div>
-        </Link>
-      </Reveal>
-
-      {/* copy column — index numeral, name, register lines, factsheet */}
-      <div className={`lg:col-span-4 ${flip ? "lg:order-1" : ""}`}>
-        <Reveal>
-          <span
-            className="pointer-events-none block select-none font-semibold leading-none text-muted-foreground/15"
-            style={{ fontSize: "clamp(4rem, 8vw, 8rem)" }}
-            aria-hidden
-          >
-            {num}
-          </span>
-          <h3 className="mt-4 text-3xl font-semibold tracking-tight text-foreground md:text-5xl">
-            {project.title}
-          </h3>
-          <div className="mt-5 space-y-1.5">
-            <p className="tech-label text-primary">{statusLabel}</p>
-            <p className="tech-label text-muted-foreground">
-              {project.location}
-            </p>
-          </div>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
-            {project.overview}
-          </p>
-        </Reveal>
-        {project.specifications.length > 0 && (
-          <Reveal delay={0.18}>
-            <dl className="mt-10 border-b border-border">
-              {project.specifications.map((s) => (
-                <div
-                  key={s.label}
-                  className="flex items-baseline justify-between gap-6 border-t border-border py-3.5"
-                >
-                  <dt className="tech-label text-muted-foreground">{s.label}</dt>
-                  <dd className="font-semibold text-foreground">{s.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </Reveal>
-        )}
-      </div>
-
-      {/* margin annotations — drafting marks in the surrounding whitespace */}
-      <div
-        className="pointer-events-none absolute inset-0 hidden text-muted-foreground/25 md:block"
-        aria-hidden
-      >
-        <span
-          className={`tech-label absolute -top-10 ${flip ? "left-0" : "right-0"}`}
-        >
-          DWG {project.slug.toUpperCase()} — {district}
-        </span>
-        <span
-          className={`tech-label absolute -bottom-12 ${flip ? "right-0" : "left-0"}`}
-        >
-          Scale 1:200
-        </span>
-      </div>
-    </div>
-  );
-}
 
 export function PortfolioIndexClient({
   status,
@@ -200,11 +61,49 @@ export function PortfolioIndexClient({
           </Reveal>
         </header>
 
-        <div className="mx-auto mt-24 w-[92vw] max-w-[1720px] space-y-32 md:mt-32 md:space-y-44">
-          {projects.map((p, i) => (
-            <ProjectBoard key={p.slug} project={p} index={i} flip={i % 2 === 1} status={status} />
+        <Stagger className="mx-auto mt-16 grid w-[92vw] max-w-[1720px] grid-cols-1 gap-8 md:mt-24 md:grid-cols-2 xl:grid-cols-3">
+          {projects.map((p) => (
+            <motion.div key={p.slug} variants={staggerItem}>
+              <Link
+                href={`/portfolio/${status}/${p.slug}`}
+                className="group sheet-corners relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors duration-500 hover:border-primary/60"
+              >
+                <GlowingEffect spread={35} glow disabled={false} proximity={56} inactiveZone={0.01} borderWidth={2} />
+                <div className="relative overflow-hidden border-b border-border" style={{ aspectRatio: "4 / 3" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.heroImage}
+                    alt={p.title}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                    className="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                  />
+                  <span className="tech-label absolute left-3 top-3 rounded-full border border-primary/30 bg-background/75 px-3 py-1 text-muted-foreground backdrop-blur-sm">
+                    {p.timeline ?? (status === "completed" ? "Completed" : "Upcoming")}
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col p-6">
+                  <h3 className="text-xl font-semibold leading-tight tracking-tight text-foreground">
+                    {p.title}
+                  </h3>
+                  <p className="tech-label mt-2 text-muted-foreground/70">{p.location}</p>
+                  <p className="mt-4 flex-1 text-sm leading-relaxed text-muted-foreground">
+                    {p.overview}
+                  </p>
+                  <span className="tech-label mt-6 inline-flex items-center gap-2 text-primary">
+                    View project
+                    <ArrowUpRight
+                      size={13}
+                      className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                      aria-hidden
+                    />
+                  </span>
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </Stagger>
       </main>
     </>
   );
