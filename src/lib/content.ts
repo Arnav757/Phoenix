@@ -54,7 +54,7 @@ export const projects = [
     location: "Financial District, Hyderabad",
     description:
       "Aquila means “Eagle” in Latin — a project that embodies the spirit and swiftness of this iconic bird, expressed through the sleek design language and architecture of the building. It stands elegant in the midst of Hyderabad's Financial District with world-class amenities.",
-    image: "/phoenix/images/aquila.png",
+    image: "/phoenix/images/aquila-v2.png",
     video: "/phoenix/videos/construction-aquila.mp4",
     // factsheet figures from the brand guidelines (zero-padded per brand style)
     specs: [

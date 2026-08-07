@@ -71,7 +71,7 @@ export const projects: Project[] = [
     location: "Financial District, Hyderabad",
     overview:
       "Business Hub, a landmark project of the future, spread over 17 acres, is the largest upcoming and privately owned SEZ campus in the heart of the financial district.",
-    heroImage: "/phoenix/portfolio/business-hub.jpg",
+    heroImage: "/phoenix/portfolio/business-hub-v2.jpg",
     specifications: [{ label: "Site", value: "17 acres" }, { label: "Type of space", value: "SEZ" }],
     amenities: ["Club house", "Sports arena"],
     timeline: "Upcoming",
@@ -83,7 +83,7 @@ export const projects: Project[] = [
     location: "Hitech City, Hyderabad",
     overview:
       "H-10 campus, spread across 14 acres, is an expansion of the well-established Avance Business Hub — designed as an IT/ITeS SEZ office space in the heart of the Hitech City corridor.",
-    heroImage: "/phoenix/portfolio/h10-campus.jpg",
+    heroImage: "/phoenix/portfolio/h10-campus-v2.jpg",
     specifications: [{ label: "Site", value: "14 acres" }, { label: "Type of space", value: "SEZ" }],
     amenities: ["Club house", "Sports arena"],
     timeline: "Upcoming",
@@ -119,7 +119,7 @@ export const projects: Project[] = [
     location: "Financial District, Hyderabad",
     overview:
       "285 Financial District, a large SEZ campus, is spread over a sprawling 23 acres — designed to dominate the skyline of Hyderabad's financial district.",
-    heroImage: "/phoenix/portfolio/285-financial-district.jpg",
+    heroImage: "/phoenix/portfolio/285-financial-district-v2.jpg",
     specifications: [{ label: "Site", value: "23 acres" }, { label: "Type of space", value: "SEZ" }],
     amenities: ["Club house", "Sports arena"],
     timeline: "Upcoming",
@@ -149,7 +149,7 @@ export const projects: Project[] = [
     location: "Jubilee Hills, Hyderabad",
     overview:
       "Phoenix Lithop is a commercial project designed to simplify everyday life. Spread over 0.56 million sq ft, Lithop features 14 floors of office space.",
-    heroImage: "/phoenix/portfolio/lithop.jpg",
+    heroImage: "/phoenix/portfolio/lithop-v2.jpg",
     specifications: [
       { label: "Towers", value: "1" },
       { label: "Floors", value: "14" },
@@ -184,7 +184,7 @@ export const projects: Project[] = [
     location: "Financial District, Hyderabad",
     overview:
       "Centaurus is a state-of-the-art project centrally located in Hyderabad's financial district — a large tower spread across 2 million sq ft.",
-    heroImage: "/phoenix/portfolio/centaurus.jpg",
+    heroImage: "/phoenix/portfolio/centaurus-v2.jpg",
     specifications: [
       { label: "Towers", value: "1" },
       { label: "Office floors", value: "17" },
@@ -204,7 +204,7 @@ export const projects: Project[] = [
     location: "Hafeezpet, Hyderabad",
     overview:
       "Phoenix Trivium is a commercial project of 0.9 mil sq ft located in the growing micro-market of Hafeezpet, intelligently designed to enhance efficiency.",
-    heroImage: "/phoenix/portfolio/trivium.jpg",
+    heroImage: "/phoenix/portfolio/trivium-v2.jpg",
     specifications: [
       { label: "Towers", value: "3" },
       { label: "Floors", value: "12" },
@@ -275,7 +275,7 @@ export const projects: Project[] = [
     location: "Financial District, Hyderabad",
     overview:
       "Aquila means “Eagle” in Latin — a project that embodies the spirit and swiftness of this iconic bird, expressed through the sleek design language and architecture of the building. It stands elegant in the midst of Hyderabad's Financial District with world-class amenities.",
-    heroImage: "/phoenix/images/aquila.png",
+    heroImage: "/phoenix/images/aquila-v2.png",
     heroVideo: "/phoenix/videos/construction-aquila.mp4",
     specifications: [
       { label: "Built-up area", value: "1.8 mil sq ft" },
