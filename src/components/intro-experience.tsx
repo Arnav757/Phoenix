@@ -242,11 +242,12 @@ export function IntroExperience({
           three-shot cinematic (hero-opening.mp4). Any component that
           implements IntroSceneProps ({active, onComplete}) drops in here
           without touching intro/nav/state code.
-          object-contain (not cover): the footage is 2:1, wider than most
-          viewports — cover would crop into the composed shot and could
-          read as a jarring, near-random close-up zoom on tall/narrow
-          screens. contain always shows the full frame, letterboxed on a
-          black backdrop that matches the cinematic treatment.
+          object-cover: fills the screen edge-to-edge. The footage is 2:1,
+          wider than most viewports, so cover does crop the sides on
+          unusually tall/narrow windows — a deliberate tradeoff of "always
+          fullscreen" over "always fully uncropped" (object-contain showed
+          the complete frame but left permanent black bars on every normal
+          viewport, which read as the video not covering the page).
           Opacity is gated on sceneActive rather than always-on: this wrap
           sits above the drafting-marks layer in paint order, and a
           <video> element paints an opaque black box by default before its
@@ -267,7 +268,7 @@ export function IntroExperience({
         <HeroVideo
           active={sceneActive}
           onComplete={handleSceneComplete}
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover"
         />
       </div>
 
