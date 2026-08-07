@@ -51,7 +51,7 @@ export const projects: Project[] = [
     location: "Hitech City, Hyderabad",
     overview:
       "Equinox is a landmark project adjacent to IKEA, spread over 6.5 acres, with 20 floors. These towers offer picturesque views of the city and are easily accessible from the Hitech City metro station.",
-    heroImage: "/phoenix/images/equinox.png",
+    heroImage: "/phoenix/images/equinox-v2.png",
     heroVideo: "/phoenix/videos/construction-equinox.mp4",
     specifications: [
       { label: "Site", value: "6.5 acres" },
@@ -131,7 +131,7 @@ export const projects: Project[] = [
     location: "Hitech City, Hyderabad",
     overview:
       "Phoenix Avance Business Hub is a commercial project offering well-designed, affordable office spaces across 10 business towers in the heart of Hitech City.",
-    heroImage: "/phoenix/portfolio/avance-business-hub.jpg",
+    heroImage: "/phoenix/portfolio/avance-business-hub-v2.jpg",
     specifications: [
       { label: "Towers", value: "10" },
       { label: "Floors", value: "12" },
