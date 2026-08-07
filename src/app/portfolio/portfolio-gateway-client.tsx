@@ -74,6 +74,9 @@ export function PortfolioGatewayClient() {
                     <img
                       src={g.image}
                       alt=""
+                      loading={i === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                      fetchPriority={i === 0 ? "high" : "auto"}
                       style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                       className="transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                       aria-hidden

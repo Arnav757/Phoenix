@@ -210,6 +210,8 @@ function FeatureSection({
         <img
           src={photo}
           alt={photoAlt || ""}
+          loading="lazy"
+          decoding="async"
           style={{
             position: "absolute",
             inset: 0,

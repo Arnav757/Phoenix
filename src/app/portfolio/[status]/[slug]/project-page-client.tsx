@@ -38,6 +38,9 @@ export function ProjectPageClient({
           <img
             src={project.heroImage}
             alt={project.title}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
           />
           <div
@@ -185,6 +188,8 @@ export function ProjectPageClient({
                 <img
                   src={project.masterplanImage}
                   alt={`${project.title} masterplan`}
+                  loading="lazy"
+                  decoding="async"
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                 />
               </div>
@@ -211,6 +216,8 @@ export function ProjectPageClient({
                   <img
                     src={src}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                     aria-hidden
                   />
@@ -258,6 +265,8 @@ export function ProjectPageClient({
                     <img
                       src={fp.image}
                       alt={fp.label}
+                      loading="lazy"
+                      decoding="async"
                       style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   </div>
@@ -311,6 +320,8 @@ export function ProjectPageClient({
                       <img
                         src={r.heroImage}
                         alt={r.title}
+                        loading="lazy"
+                        decoding="async"
                         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                         className="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                       />

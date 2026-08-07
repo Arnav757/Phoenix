@@ -1,15 +1,39 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Navbar } from "@/components/navbar";
 import { Reveal, SectionHeading } from "@/components/reveal";
 import { Button } from "@/components/ui/button";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
-import { ThreeDPhotoCarousel } from "@/components/ui/3d-carousel";
-import { CircularGallery, type GalleryItem } from "@/components/ui/circular-gallery";
+import type { GalleryItem } from "@/components/ui/circular-gallery";
 import { awardsPage, certifications, company } from "@/lib/content";
+
+// Both galleries are well below the fold and carry their own drag/3D-
+// transform/animation-loop logic — code-split rather than parsing and
+// executing them before the hero above ever paints.
+const ThreeDPhotoCarousel = dynamic(
+  () => import("@/components/ui/3d-carousel").then((m) => m.ThreeDPhotoCarousel),
+  {
+    loading: () => (
+      <div
+        className="w-full animate-pulse rounded-lg bg-card"
+        style={{ height: 450 }}
+        aria-hidden
+      />
+    ),
+  }
+);
+const CircularGallery = dynamic(
+  () => import("@/components/ui/circular-gallery").then((m) => m.CircularGallery),
+  {
+    loading: () => (
+      <div className="aspect-square w-full max-w-[640px] animate-pulse rounded-full bg-card" aria-hidden />
+    ),
+  }
+);
 
 // Awards & Certifications — sheet 08 of the drawing set. Elevated pass:
 // atlas tiles behave as premium cards with click-to-preview; certifications

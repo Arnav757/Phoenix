@@ -57,7 +57,7 @@ export function ConstructionReveal({
           poster={image}
           muted
           playsInline
-          preload="auto"
+          preload="metadata"
           disablePictureInPicture
           controls={false}
           className="absolute inset-0 h-full w-full object-cover"

@@ -186,6 +186,8 @@ const Carousel = memo(function Carousel({
             <motion.img
               src={imgUrl}
               alt=""
+              loading="lazy"
+              decoding="async"
               layoutId={`img-${imgUrl}`}
               className="pointer-events-none aspect-square w-full rounded-sm border border-primary/20 bg-card object-cover shadow-[0_1px_0_0_var(--color-primary)_inset]"
               initial={{ filter: "blur(4px)" }}
@@ -240,6 +242,8 @@ export function ThreeDPhotoCarousel({
               key={src}
               src={src}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="aspect-square w-full rounded-sm border border-primary/20 bg-card object-cover"
               aria-hidden
             />

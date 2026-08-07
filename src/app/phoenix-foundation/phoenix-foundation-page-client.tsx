@@ -250,6 +250,8 @@ function InitiativeSection({
         <img
           src={initiative.photo}
           alt={initiative.title}
+          loading="lazy"
+          decoding="async"
           style={{
             position: "absolute",
             inset: 0,
@@ -328,6 +330,8 @@ function AccoladesGrid() {
               <img
                 src={a.photo}
                 alt={a.title}
+                loading="lazy"
+                decoding="async"
                 style={{
                   position: "absolute",
                   inset: 0,

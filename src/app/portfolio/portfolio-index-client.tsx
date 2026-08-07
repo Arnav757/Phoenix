@@ -74,6 +74,8 @@ export function PortfolioIndexClient({
                   <img
                     src={p.heroImage}
                     alt={p.title}
+                    loading="lazy"
+                    decoding="async"
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
                     className="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                   />

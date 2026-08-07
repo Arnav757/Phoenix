@@ -1,13 +1,29 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Navbar } from "@/components/navbar";
 import { Reveal, Stagger, staggerItem } from "@/components/reveal";
 import { Input } from "@/components/ui/input";
-import { NetworkGlobe } from "./network-globe";
 import { NetworkPanel } from "./network-panel";
+
+// cobe (WebGL/canvas globe renderer) is a heavy, client-only dependency
+// that's only needed once this section scrolls into view — code-split it
+// out of the initial bundle instead of loading it on every page visit.
+const NetworkGlobe = dynamic(
+  () => import("./network-globe").then((m) => m.NetworkGlobe),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="aspect-square w-full animate-pulse rounded-full border border-border bg-card"
+        aria-hidden
+      />
+    ),
+  }
+);
 import type { NetworkEntity, Region } from "@/lib/network-types";
 import {
   CATEGORIES,
